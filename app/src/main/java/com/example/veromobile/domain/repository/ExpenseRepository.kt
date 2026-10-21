@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface ExpenseRepository {
     suspend fun addExpense(expense: Expense): Result<Unit>
-    suspend fun suggestedCategoryForNote(note: String): String?   // FR-28
+    suspend fun suggestedCategoryForNote(note: String): String?
     suspend fun lastUsedChannel(): PaymentChannel?
     fun recentCategoryIds(limit: Int): Flow<List<String>>
 }
