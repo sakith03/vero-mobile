@@ -136,13 +136,13 @@ Ensure the following are installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone <YOUR_REPOSITORY_URL>
+git clone https://github.com/sakith03/vero-mobile.git
 ```
 
 Navigate to the project directory:
 
 ```bash
-cd <YOUR_PROJECT_DIRECTORY>
+cd <your_project_directory>
 ```
 
 ### 2. Configure Firebase
