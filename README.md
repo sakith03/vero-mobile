@@ -1,10 +1,12 @@
-# Vero - Personal Finance Tracker
+<img width="3554" height="1104" alt="Frame 6 (1)" src="https://github.com/user-attachments/assets/5cb94a7a-c50e-4a9c-94e0-6231f13e5656" />
 
-## Project Overview
+## Project Overview - A Personal Finance Tracking App
 
 The Vero - Personal Finance Tracker is an Android application designed to help users manage their personal finances by tracking income, expenses, freelance invoices, recurring payments, cryptocurrency profits and losses, and savings goals.
 
 The application supports multiple income sources and currencies, including LKR and USD, allowing users to record transactions and maintain accurate financial records. It also provides a dashboard with monthly financial summaries, expense breakdowns, and savings goal progress.
+
+[![GitHub last commit](https://img.shields.io/github/last-commit/sakith03/vero-mobile.svg)](https://github.com/sakith03/vero-mobile/commits/main)
 
 ### Key Features
 
