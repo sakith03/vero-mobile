@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.veromobile.data.local.AppDatabase
 import com.example.veromobile.data.local.ExpenseDao
+import com.example.veromobile.data.local.GoalMigrations
 import com.example.veromobile.data.repository.ExpenseRepositoryImpl
 import com.example.veromobile.domain.repository.ExpenseRepository
 import com.example.veromobile.domain.session.DevUserSession
@@ -21,7 +22,9 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Provides @Singleton
     fun provideDb(@ApplicationContext ctx: Context): AppDatabase =
-        Room.databaseBuilder(ctx, AppDatabase::class.java, "finance.db").build()
+        Room.databaseBuilder(ctx, AppDatabase::class.java, "finance.db")
+            .addMigrations(GoalMigrations.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideExpenseDao(db: AppDatabase): ExpenseDao = db.expenseDao()
