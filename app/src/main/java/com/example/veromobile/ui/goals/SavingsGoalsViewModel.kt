@@ -86,8 +86,9 @@ class SavingsGoalsViewModel @Inject constructor(
                             detailsJob = null
                             _uiState.update { it.copy(isLoading = false, details = null) }
                         } else {
-                            val selected = goals.firstOrNull { it.id == savedState.get<String>("goal.selected") } ?: goals.first()
-                            if (detailsJob == null || selected.id != savedState.get<String>("goal.selected")) selectGoal(selected.id)
+                            val selectedId = savedState.get<String>("goal.selected")
+                            val selectedGoal = goals.firstOrNull { it.id == selectedId } ?: goals.first()
+                            if (detailsJob == null || selectedGoal.id != selectedId) selectGoal(selectedGoal.id)
                         }
                     }
                 }
@@ -121,8 +122,12 @@ class SavingsGoalsViewModel @Inject constructor(
         val goal = _uiState.value.details?.goal ?: return
         savedState["goal.draftId"] = goal.id
         savedState["goal.createdAt"] = goal.createdAt
-        setForm(GoalFormState(goal.name, goalAmountInput(goal.targetAmountMinor), goal.targetDate.toString(),
-            goalAmountInput(goal.openingAmountMinor)))
+        setForm(GoalFormState(
+            name = goal.name,
+            target = goalAmountInput(goal.targetAmountMinor),
+            date = goal.targetDate.toString(),
+            opening = goalAmountInput(goal.openingAmountMinor)
+        ))
         setPage(GoalPage.EDIT)
     }
 
@@ -180,9 +185,11 @@ class SavingsGoalsViewModel @Inject constructor(
     }
 
     fun openContribution(amountMinor: Long? = null) {
-        if (_uiState.value.details == null || _uiState.value.contribution.isOpen) return
+        val state = _uiState.value
+        val goal = state.details?.goal ?: return
+        if (state.contribution.isOpen) return
         savedState["contribution.id"] = UUID.randomUUID().toString()
-        savedState["contribution.goalId"] = _uiState.value.details!!.goal.id
+        savedState["contribution.goalId"] = goal.id
         savedState["contribution.createdAt"] = clock.millis()
         setContribution(ContributionFormState(isOpen = true, amount = amountMinor?.let(::goalAmountInput) ?: "",
             date = today().toString()))
@@ -204,7 +211,9 @@ class SavingsGoalsViewModel @Inject constructor(
     }
 
     fun changeContributionNote(note: String) {
-        if (!_uiState.value.contribution.isSaving) setContribution(_uiState.value.contribution.copy(note = note, error = null))
+        val form = _uiState.value.contribution
+        if (form.isSaving) return
+        setContribution(form.copy(note = note, error = null))
     }
 
     fun saveContribution() {

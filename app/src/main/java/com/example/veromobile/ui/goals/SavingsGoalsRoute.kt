@@ -24,7 +24,14 @@ import kotlinx.serialization.Serializable
 @Serializable
 object SavingsGoalsDestination
 
-// Register in the app graph when the dashboard owner adds the goal entry points.
+/** Shared entry for the future Dashboard goal card and bottom navigation goal icon. */
+fun NavController.navigateToSavingsGoals() {
+    navigate(SavingsGoalsDestination) {
+        launchSingleTop = true
+    }
+}
+
+/** Registers the existing repository-backed UI; Add/Edit/Contribution stay within this destination. */
 fun NavGraphBuilder.savingsGoalsGraph(navController: NavController) {
     composable<SavingsGoalsDestination> {
         SavingsGoalsRoute(onBack = { navController.popBackStack() })

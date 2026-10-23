@@ -92,7 +92,9 @@ class SavingsGoalRepositoryImpl @Inject constructor(
         ))
     }
 
-    private suspend fun <T> write(block: suspend () -> GoalResult<T>): GoalResult<T> = try {
+    private suspend fun write(
+        block: suspend () -> GoalResult<Unit>
+    ): GoalResult<Unit> = try {
         block()
     } catch (cancelled: CancellationException) {
         throw cancelled
