@@ -36,6 +36,8 @@ fun DashboardRoute(
         state = state,
         onSalaryChanged = viewModel::onSalaryInputChanged,
         onConfirmSalary = viewModel::confirmSalary,
+        onPreviousMonth = viewModel::previousMonth,
+        onNextMonth = viewModel::nextMonth,
         onNavigateAccount = onNavigateAccount,
         onNavigateGoals = onNavigateGoals,
         onNavigateInvoices = onNavigateInvoices
@@ -47,6 +49,8 @@ fun DashboardScreen(
     state: DashboardUiState,
     onSalaryChanged: (String) -> Unit,
     onConfirmSalary: () -> Unit,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
     onNavigateAccount: () -> Unit,
     onNavigateGoals: () -> Unit,
     onNavigateInvoices: () -> Unit
@@ -152,7 +156,7 @@ fun DashboardScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Button(
-                                onClick = { },
+                                onClick = onPreviousMonth,
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.2f)),
                                 modifier = Modifier.size(width = 48.dp, height = 40.dp),
                                 shape = RoundedCornerShape(99.dp)
@@ -168,7 +172,7 @@ fun DashboardScreen(
                             )
                             Spacer(Modifier.width(12.dp))
                             Button(
-                                onClick = { },
+                                onClick = onNextMonth,
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.2f)),
                                 modifier = Modifier.size(width = 48.dp, height = 40.dp),
                                 shape = RoundedCornerShape(99.dp)
@@ -436,42 +440,51 @@ fun DashboardScreen(
                                 Text("View all", color = Color(0xFF7A7A7A), fontSize = 13.sp)
                             }
 
-                            state.recentActivity.forEach { item ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(18.dp))
-                                        .background(Color(0xFF0A0A0A))
-                                        .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(18.dp))
-                                        .padding(10.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
+                            if (state.recentActivity.isEmpty()) {
+                                Text(
+                                    text = "No activity for this month",
+                                    color = Color(0xFF7A7A7A),
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.padding(vertical = 12.dp)
+                                )
+                            } else {
+                                state.recentActivity.forEach { item ->
+                                    Row(
                                         modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(Color(0xFF1A1A1A)),
-                                        contentAlignment = Alignment.Center
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .background(Color(0xFF0A0A0A))
+                                            .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(18.dp))
+                                            .padding(10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(item.tag, color = Color(0xFFF47422), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                                        Text(item.meta, color = Color(0xFF7A7A7A), fontSize = 11.sp)
-                                    }
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = item.amount,
-                                            color = if (item.isIncome) Color(0xFF6EE7A0) else Color.White,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = if (item.isIncome) "Income" else "Expense",
-                                            color = if (item.isIncome) Color(0xFF6EE7A0) else Color(0xFFFF7A5C),
-                                            fontSize = 11.sp
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .size(42.dp)
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(Color(0xFF1A1A1A)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(item.tag, color = Color(0xFFF47422), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                            Text(item.meta, color = Color(0xFF7A7A7A), fontSize = 11.sp)
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = item.amount,
+                                                color = if (item.isIncome) Color(0xFF6EE7A0) else Color.White,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                text = if (item.isIncome) "Income" else "Expense",
+                                                color = if (item.isIncome) Color(0xFF6EE7A0) else Color(0xFFFF7A5C),
+                                                fontSize = 11.sp
+                                            )
+                                        }
                                     }
                                 }
                             }
