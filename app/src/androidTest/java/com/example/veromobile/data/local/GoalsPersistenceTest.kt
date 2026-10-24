@@ -47,6 +47,7 @@ class GoalsPersistenceTest {
     @After fun tearDown() { db.close(); files.forEach { context.deleteDatabase(it) } }
 
     private fun repository(userId: String = "alice") = SavingsGoalRepositoryImpl(db.goalDao(),
+        com.example.veromobile.ui.goals.GoalsTestFirestore,
         object : UserSession { override val userId = userId }, clock)
 
     private suspend fun details(userId: String = "alice") = withTimeout(5000) {

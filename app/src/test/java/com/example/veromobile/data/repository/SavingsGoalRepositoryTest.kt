@@ -6,6 +6,11 @@ import com.example.veromobile.domain.model.GoalContribution
 import com.example.veromobile.domain.model.SavingsGoal
 import com.example.veromobile.domain.repository.GoalError
 import com.example.veromobile.domain.repository.GoalResult
+import com.example.veromobile.domain.repository.FirestoreRepository
+import com.example.veromobile.domain.repository.FirestoreResult
+import com.example.veromobile.data.firestore.FirestoreCollection
+import com.example.veromobile.data.firestore.UserFirestoreDocument
+import kotlinx.coroutines.flow.Flow
 import com.example.veromobile.domain.session.UserSession
 import java.time.Clock
 import java.time.Instant
@@ -26,7 +31,7 @@ class SavingsGoalRepositoryTest {
     private val contribution = GoalContribution(id = "c1", goalId = "goal", amountMinor = 1_000_000, date = today)
     private val dao = StubGoalDao()
     private val session = object : UserSession { override var userId = "alice" }
-    private val repository = SavingsGoalRepositoryImpl(dao, session, clock)
+    private val repository = SavingsGoalRepositoryImpl(dao, GoalsTestFirestore, session, clock)
 
     @Test fun `create validates and passes session ownership`() = runBlocking {
         assertEquals(GoalResult.Success(Unit), repository.createGoal(goal))
@@ -155,4 +160,33 @@ class SavingsGoalRepositoryTest {
             failure?.let { throw it }; lastContribution = contribution; return outcome
         }
     }
+}
+
+/** Local persistence tests must never contact a real Firebase account. */
+internal object GoalsTestFirestore : FirestoreRepository {
+    override suspend fun <T : UserFirestoreDocument> create(
+        collection: FirestoreCollection<T>, document: T
+    ) = FirestoreResult.Success(Unit)
+
+    override suspend fun <T : UserFirestoreDocument> update(
+        collection: FirestoreCollection<T>, document: T
+    ) = FirestoreResult.Success(Unit)
+
+    override suspend fun <T : UserFirestoreDocument> get(
+        collection: FirestoreCollection<T>, documentId: String
+    ): FirestoreResult<T?> = error("Not used by local Goals tests")
+
+    override suspend fun <T : UserFirestoreDocument> softDelete(
+        collection: FirestoreCollection<T>, documentId: String, updatedAt: Long
+    ): FirestoreResult<Unit> = error("Not used by local Goals tests")
+
+    override fun <T : UserFirestoreDocument> observeAll(
+        collection: FirestoreCollection<T>
+    ): Flow<FirestoreResult<List<T>>> =
+        error("Not used by local Goals tests")
+
+    override fun <T : UserFirestoreDocument> observeMonthly(
+        collection: FirestoreCollection<T>, startEpochDay: Long, endEpochDayExclusive: Long
+    ): Flow<FirestoreResult<List<T>>> =
+        error("Not used by local Goals tests")
 }
