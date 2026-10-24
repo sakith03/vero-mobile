@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -63,4 +64,7 @@ dependencies {
     implementation(libs.nav.compose)
     implementation(libs.lifecycle.compose)
     implementation(libs.kotlinx.serialization)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
 }
