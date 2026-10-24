@@ -14,8 +14,11 @@ class IncomeRepositoryImpl @Inject constructor(
 ) : IncomeRepository {
 
     override suspend fun addIncome(income: Income): Result<Unit> =
-        runCatching { dao.insert(income.toEntity(session.userId)) }
+        runCatching { dao.insert(income.toEntity(owner())) }
 
     override suspend fun lastRateMicro(currency: Currency): Long? =
-        runCatching { dao.lastRateMicro(session.userId, currency.name) }.getOrNull()
+        runCatching { dao.lastRateMicro(owner(), currency.name) }.getOrNull()
+
+    private fun owner(): String = session.userId.takeIf(String::isNotBlank)
+        ?: throw IllegalStateException("No authenticated user")
 }
