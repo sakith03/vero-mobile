@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 enum class EntryType(val label: String) {
-    EXPENSE("Expense"), INCOME("Income"), TRANSFER("Transfer")
+    EXPENSE("Expense"), INCOME("Income")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +36,6 @@ fun EntryTypeTopBar(
                 SegmentedButton(
                     selected = type == selected,
                     onClick = { onSelect(type) },
-                    enabled = type != EntryType.TRANSFER,      // enabled when you build Transfer
                     shape = SegmentedButtonDefaults.itemShape(i, EntryType.entries.size)
                 ) { Text(type.label) }
             }

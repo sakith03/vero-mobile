@@ -24,7 +24,6 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
         when (type) {
             EntryType.EXPENSE -> navController.popBackStack<AddExpenseDestination>(inclusive = false)
             EntryType.INCOME -> navController.navigate(AddIncomeDestination) { launchSingleTop = true }
-            EntryType.TRANSFER -> Unit
         }
     }
 
