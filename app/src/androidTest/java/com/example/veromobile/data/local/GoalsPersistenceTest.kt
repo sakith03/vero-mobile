@@ -227,7 +227,7 @@ class GoalsPersistenceTest {
         assertEquals(listOf(contribution), details()!!.contributions)
     }
 
-    @Test fun migrationValidatesVersionFourAndPreservesEveryExpenseColumn() = runBlocking {
+    @Test fun migrationValidatesVersionFiveAndPreservesEveryExpenseColumn() = runBlocking {
         db.close()
         val name = "goals-migration-${UUID.randomUUID()}.db".also { files.add(it) }
         val file = context.getDatabasePath(name)
@@ -259,7 +259,7 @@ class GoalsPersistenceTest {
             assertEquals("Lunch", rows.getString(6)); assertEquals(123L, rows.getLong(7))
             assertEquals(0, rows.getInt(8)); assertEquals(1, rows.getInt(9))
         }
-        assertEquals(4, db.openHelper.writableDatabase.version)
+        assertEquals(5, db.openHelper.writableDatabase.version)
         assertEquals("food", db.expenseDao().lastCategoryForNote("alice", "Lunch"))
         assertEquals(GoalResult.Success(Unit), repository().createGoal(goal))
         assertEquals(GoalResult.Success(Unit), repository().addContribution(contribution))
@@ -270,5 +270,5 @@ class GoalsPersistenceTest {
     }
 
     private fun openFile(name: String) = Room.databaseBuilder(context, AppDatabase::class.java, name)
-        .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3, InvoiceMigrations.MIGRATION_3_4).build()
+        .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3, InvoiceMigrations.MIGRATION_3_4, RecurringMigrations.MIGRATION_4_5).build()
 }
