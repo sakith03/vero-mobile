@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +26,7 @@ fun EntryTypeTopBar(
     selected: EntryType,
     onClose: () -> Unit,
     onSelect: (EntryType) -> Unit,
+    onAccount: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -38,6 +40,11 @@ fun EntryTypeTopBar(
                     onClick = { onSelect(type) },
                     shape = SegmentedButtonDefaults.itemShape(i, EntryType.entries.size)
                 ) { Text(type.label) }
+            }
+        }
+        onAccount?.let { openAccount ->
+            IconButton(onClick = openAccount) {
+                Icon(Icons.Default.AccountCircle, contentDescription = "Account")
             }
         }
     }
