@@ -40,6 +40,7 @@ fun AddIncomeRoute(
     onSelectType: (EntryType) -> Unit,
     onOpenInvoices: () -> Unit,
     onNewInvoice: () -> Unit,
+    onAccount: () -> Unit = {},
     viewModel: AddIncomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -61,7 +62,7 @@ fun AddIncomeRoute(
         onAmount = viewModel::onAmountChanged, onLkr = viewModel::onLkrChanged,
         onUseLastRate = viewModel::onUseLastRate, onDate = viewModel::onDateSelected,
         onNote = viewModel::onNoteChanged, onSave = viewModel::onSave,
-        onOpenInvoices = onOpenInvoices, onNewInvoice = onNewInvoice
+        onOpenInvoices = onOpenInvoices, onNewInvoice = onNewInvoice, onAccount = onAccount
     )
 }
 
@@ -80,7 +81,8 @@ fun AddIncomeScreen(
     onNote: (String) -> Unit,
     onSave: () -> Unit,
     onOpenInvoices: () -> Unit,
-    onNewInvoice: () -> Unit
+    onNewInvoice: () -> Unit,
+    onAccount: () -> Unit = {}
 ) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -89,7 +91,7 @@ fun AddIncomeScreen(
         Column(
             Modifier.padding(padding).padding(horizontal = 16.dp).fillMaxSize().imePadding()
         ) {
-            EntryTypeTopBar(EntryType.INCOME, onClose, onSelectType)
+            EntryTypeTopBar(EntryType.INCOME, onClose, onSelectType, onAccount)
 
             Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()),

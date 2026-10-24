@@ -1,19 +1,246 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function isOwner(userId) {
-      return request.auth != null
-        && request.auth.uid == userId;
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validBase(userId, documentId, data) {
+      return data.id is string
+        && data.id == documentId
+        && data.userId is string
+        && data.userId == userId
+        && data.updatedAt is int
+        && data.updatedAt > 0
+        && data.isDeleted is bool;
+    }
+
+    function validOptionalString(data, field) {
+      return !data.keys().hasAny([field]) || data[field] == null || data[field] is string;
+    }
+
+    function validProfile(userId, data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'email', 'createdAt'])
+        && data.uid == userId
+        && (data.email == null || data.email is string)
+        && data.createdAt is timestamp;
+    }
+
+    function validIncome(userId, documentId, data) {
+      return validBase(userId, documentId, data)
+        && data.keys().hasAll([
+          'id', 'userId', 'source', 'originalAmountMinor', 'originalCurrency',
+          'exchangeRateMicro', 'rateSource', 'lkrAmountMinor', 'dateEpochDay',
+          'note', 'updatedAt', 'isDeleted'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'source', 'originalAmountMinor', 'originalCurrency',
+          'exchangeRateMicro', 'rateSource', 'lkrAmountMinor', 'dateEpochDay',
+          'note', 'invoiceId', 'updatedAt', 'isDeleted'
+        ])
+        && data.source in ['SALARY', 'FREELANCE', 'ADSENSE', 'OTHER']
+        && data.originalAmountMinor is int && data.originalAmountMinor > 0
+        && data.originalCurrency in ['LKR', 'USD']
+        && data.exchangeRateMicro is int && data.exchangeRateMicro > 0
+        && data.rateSource in ['NONE', 'MANUAL']
+        && data.lkrAmountMinor is int && data.lkrAmountMinor > 0
+        && data.dateEpochDay is int
+        && data.note is string
+        && validOptionalString(data, 'invoiceId');
+    }
+
+    function validExpense(userId, documentId, data) {
+      return validBase(userId, documentId, data)
+        && data.keys().hasAll([
+          'id', 'userId', 'amountMinor', 'categoryId', 'dateEpochDay',
+          'channel', 'note', 'updatedAt', 'isDeleted'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'amountMinor', 'categoryId', 'dateEpochDay',
+          'channel', 'note', 'updatedAt', 'isDeleted'
+        ])
+        && data.amountMinor is int && data.amountMinor > 0
+        && data.categoryId is string && data.categoryId.size() > 0
+        && data.dateEpochDay is int
+        && data.channel in ['CARD', 'CASH', 'SECONDARY_ACCOUNT', 'BANK_TRANSFER', 'OTHER']
+        && data.note is string;
+    }
+
+    function validCategory(userId, documentId, data) {
+      return validBase(userId, documentId, data)
+        && data.keys().hasAll([
+          'id', 'userId', 'name', 'committed', 'createdAt', 'updatedAt', 'isDeleted'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'name', 'committed', 'createdAt', 'updatedAt', 'isDeleted'
+        ])
+        && data.name is string && data.name.size() > 0
+        && data.committed is bool
+        && data.createdAt is int && data.createdAt > 0;
+    }
+
+    function validInvoice(userId, documentId, data) {
+      return validBase(userId, documentId, data)
+        && data.keys().hasAll([
+          'id', 'userId', 'client', 'project', 'milestone', 'originalAmountMinor',
+          'originalCurrency', 'dueDateEpochDay', 'status', 'createdAt',
+          'updatedAt', 'isDeleted'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'client', 'project', 'milestone', 'originalAmountMinor',
+          'originalCurrency', 'dueDateEpochDay', 'status', 'linkedIncomeId',
+          'createdAt', 'updatedAt', 'isDeleted'
+        ])
+        && data.client is string && data.client.size() > 0
+        && data.project is string
+        && data.milestone is string
+        && data.originalAmountMinor is int && data.originalAmountMinor > 0
+        && data.originalCurrency in ['LKR', 'USD']
+        && data.dueDateEpochDay is int
+        && data.status in ['EXPECTED', 'OVERDUE', 'RECEIVED', 'VOID']
+        && validOptionalString(data, 'linkedIncomeId')
+        && data.createdAt is int && data.createdAt > 0;
+    }
+
+    function validCryptoTrade(userId, documentId, data) {
+      return validBase(userId, documentId, data)
+        && data.keys().hasAll([
+          'id', 'userId', 'symbol', 'quantityAtomic', 'quantityScale',
+          'buyAmountMinor', 'sellAmountMinor', 'feeAmountMinor',
+          'settlementCurrency', 'realizedProfitMinor', 'closedDateEpochDay',
+          'createdAt', 'updatedAt', 'isDeleted'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'symbol', 'quantityAtomic', 'quantityScale',
+          'buyAmountMinor', 'sellAmountMinor', 'feeAmountMinor',
+          'settlementCurrency', 'realizedProfitMinor', 'closedDateEpochDay',
+          'createdAt', 'updatedAt', 'isDeleted'
+        ])
+        && data.symbol is string && data.symbol.size() > 0
+        && data.quantityAtomic is int && data.quantityAtomic > 0
+        && data.quantityScale is int && data.quantityScale >= 0 && data.quantityScale <= 18
+        && data.buyAmountMinor is int && data.buyAmountMinor >= 0
+        && data.sellAmountMinor is int && data.sellAmountMinor >= 0
+        && data.feeAmountMinor is int && data.feeAmountMinor >= 0
+        && data.settlementCurrency in ['LKR', 'USD']
+        && data.realizedProfitMinor is int
+        && data.closedDateEpochDay is int
+        && data.createdAt is int && data.createdAt > 0;
+    }
+
+    function validRecurringRule(userId, documentId, data) {
+      return validBase(userId, documentId, data)
+        && data.keys().hasAll([
+          'id', 'userId', 'name', 'amountMinor', 'categoryId', 'channel',
+          'frequency', 'nextDueDateEpochDay', 'note', 'active', 'createdAt',
+          'updatedAt', 'isDeleted'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'name', 'amountMinor', 'categoryId', 'channel',
+          'frequency', 'nextDueDateEpochDay', 'note', 'active', 'createdAt',
+          'updatedAt', 'isDeleted'
+        ])
+        && data.name is string && data.name.size() > 0
+        && data.amountMinor is int && data.amountMinor > 0
+        && data.categoryId is string && data.categoryId.size() > 0
+        && data.channel in ['CARD', 'CASH', 'SECONDARY_ACCOUNT', 'BANK_TRANSFER', 'OTHER']
+        && data.frequency is string && data.frequency.size() > 0
+        && data.nextDueDateEpochDay is int
+        && data.note is string
+        && data.active is bool
+        && data.createdAt is int && data.createdAt > 0;
+    }
+
+    function validSavingsGoal(userId, documentId, data) {
+      return validBase(userId, documentId, data)
+        && data.keys().hasAll([
+          'id', 'userId', 'name', 'targetAmountMinor', 'targetDateEpochDay',
+          'openingAmountMinor', 'createdAt', 'updatedAt', 'isDeleted'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'name', 'targetAmountMinor', 'targetDateEpochDay',
+          'openingAmountMinor', 'createdAt', 'updatedAt', 'isDeleted'
+        ])
+        && data.name is string && data.name.size() > 0
+        && data.targetAmountMinor is int && data.targetAmountMinor > 0
+        && data.targetDateEpochDay is int
+        && data.openingAmountMinor is int && data.openingAmountMinor >= 0
+        && data.createdAt is int && data.createdAt > 0;
+    }
+
+    function validGoalContribution(userId, documentId, data) {
+      return validBase(userId, documentId, data)
+        && data.keys().hasAll([
+          'id', 'goalId', 'userId', 'amountMinor', 'dateEpochDay',
+          'createdAt', 'updatedAt', 'isDeleted'
+        ])
+        && data.keys().hasOnly([
+          'id', 'goalId', 'userId', 'amountMinor', 'dateEpochDay', 'note',
+          'createdAt', 'updatedAt', 'isDeleted'
+        ])
+        && data.goalId is string && data.goalId.size() > 0
+        && data.amountMinor is int && data.amountMinor > 0
+        && data.dateEpochDay is int
+        && validOptionalString(data, 'note')
+        && data.createdAt is int && data.createdAt > 0;
     }
 
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && validProfile(userId, request.resource.data);
+      allow update: if isOwner(userId)
+        && validProfile(userId, request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
 
-      match /{document=**} {
-        allow read, write: if isOwner(userId);
+      match /incomes/{documentId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validIncome(userId, documentId, request.resource.data);
+        allow delete: if false;
+      }
+
+      match /expenses/{documentId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validExpense(userId, documentId, request.resource.data);
+        allow delete: if false;
+      }
+
+      match /categories/{documentId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validCategory(userId, documentId, request.resource.data);
+        allow delete: if false;
+      }
+
+      match /invoices/{documentId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validInvoice(userId, documentId, request.resource.data);
+        allow delete: if false;
+      }
+
+      match /cryptoTrades/{documentId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validCryptoTrade(userId, documentId, request.resource.data);
+        allow delete: if false;
+      }
+
+      match /recurringRules/{documentId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validRecurringRule(userId, documentId, request.resource.data);
+        allow delete: if false;
+      }
+
+      match /savingsGoals/{documentId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validSavingsGoal(userId, documentId, request.resource.data);
+        allow delete: if false;
+      }
+
+      match /goalContributions/{documentId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validGoalContribution(userId, documentId, request.resource.data);
+        allow delete: if false;
       }
     }
   }
