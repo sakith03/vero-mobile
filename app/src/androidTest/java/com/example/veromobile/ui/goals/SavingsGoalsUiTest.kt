@@ -63,7 +63,9 @@ class SavingsGoalsUiTest {
     private fun openDatabase() {
         // A private on-disk test database lets us verify persistence across a fresh connection/VM.
         db = Room.databaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext,
-            AppDatabase::class.java, databaseName).build()
+            AppDatabase::class.java, databaseName)
+            .addMigrations(com.example.veromobile.data.local.GoalMigrations.MIGRATION_1_2,
+                com.example.veromobile.data.local.GoalMigrations.MIGRATION_2_3).build()
         val roomRepository = SavingsGoalRepositoryImpl(db.goalDao(), object : UserSession { override val userId = "ui-test" }, clock)
         repository = object : SavingsGoalRepository by roomRepository {
             override fun observeGoalDetails(goalId: String, today: LocalDate): Flow<GoalResult<GoalDetails?>> =
