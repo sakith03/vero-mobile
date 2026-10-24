@@ -1,0 +1,29 @@
+{
+    "project_info": {
+        "project_number": "877642913339",
+        "project_id": "vero-finance-app",
+        "storage_bucket": "vero-finance-app.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:877642913339:android:6b115b1ee3f66f1ee22e1e",
+                "android_client_info": {
+                    "package_name": "com.example.veromobile"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyBvf49hm-GfuNVAiDN-osbpe9fcp-vlR1M"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}
