@@ -41,7 +41,8 @@ The application supports multiple income sources and currencies, including LKR a
 
 The application follows the **Model-View-ViewModel (MVVM)** architecture to separate the user interface, application logic, and data management.
 
-<img width="847" height="949" alt="Screenshot 2026-10-21 000358" src="https://github.com/user-attachments/assets/22da1a16-50b4-4393-b62c-ca10155640c5" />
+<img width="813" height="914" alt="image" src="https://github.com/user-attachments/assets/6190da7a-e747-4465-b9bd-549cb8e21cf9" />
+
 
 ### Architecture Layers
 
