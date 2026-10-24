@@ -3,8 +3,6 @@ package com.example.veromobile.ui.expense
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,11 +12,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.veromobile.domain.model.PaymentChannel
+import com.example.veromobile.ui.components.EntryType
+import com.example.veromobile.ui.components.EntryTypeTopBar
 import com.example.veromobile.ui.expense.components.NumericKeypad
 
 @Composable
 fun AddExpenseRoute(
     onClose: () -> Unit,
+    onSelectType: (EntryType) -> Unit,
     viewModel: AddExpenseViewModel = hiltViewModel()    // injected, never constructed manually
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -34,7 +35,7 @@ fun AddExpenseRoute(
     }
 
     AddExpenseScreen(
-        state = state, snackbarHostState = snackbar, onClose = onClose,
+        state = state, snackbarHostState = snackbar, onClose = onClose, onSelectType = onSelectType,
         onKey = viewModel::onKey, onBackspace = viewModel::onBackspace,
         onCategory = viewModel::onCategorySelected, onChannel = viewModel::onChannelSelected,
         onNote = viewModel::onNoteChanged, onSave = viewModel::onSave
@@ -47,6 +48,7 @@ fun AddExpenseScreen(
     state: AddExpenseUiState,
     snackbarHostState: SnackbarHostState,
     onClose: () -> Unit,
+    onSelectType: (EntryType) -> Unit,
     onKey: (Char) -> Unit,
     onBackspace: () -> Unit,
     onCategory: (String) -> Unit,
@@ -65,19 +67,7 @@ fun AddExpenseScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Top bar: close + type tabs (only Expense works for now)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
-                }
-                SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
-                    listOf("Expense", "Income", "Transfer").forEachIndexed { i, label ->
-                        SegmentedButton(
-                            selected = i == 0, onClick = {}, enabled = i == 0,
-                            shape = SegmentedButtonDefaults.itemShape(i, 3)
-                        ) { Text(label) }
-                    }
-                }
-            }
+            EntryTypeTopBar(EntryType.EXPENSE, onClose, onSelectType)
 
             // Amount header
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
