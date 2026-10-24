@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".VeroMobile"
         android:allowBackup="true"
@@ -24,6 +26,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- TEMPORARY: Debug-only Activity for testing Firebase Auth registration.
+             Launch via ADB:  adb shell am start -n com.example.veromobile/.ui.debug.FirebaseAuthTestActivity
+             Remove this entry after testing. -->
+        <activity
+            android:name=".ui.debug.FirebaseAuthTestActivity"
+            android:exported="true"
+            android:label="Firebase Auth Test"
+            android:theme="@style/Theme.VeroMobile" />
     </application>
 
 </manifest>
