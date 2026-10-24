@@ -1,28 +1,42 @@
 package com.example.veromobile.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.veromobile.ui.components.EntryType
+import com.example.veromobile.ui.components.AppBottomNavBar
+import com.example.veromobile.ui.components.AppNavTab
 import com.example.veromobile.ui.auth.AccountScreen
 import com.example.veromobile.ui.auth.AuthLoadingScreen
 import com.example.veromobile.ui.auth.AuthScreen
 import com.example.veromobile.ui.auth.AuthViewModel
+import com.example.veromobile.ui.dashboard.DashboardRoute
 import com.example.veromobile.ui.expense.AddExpenseRoute
+import com.example.veromobile.ui.goals.navigateToSavingsGoals
 import com.example.veromobile.ui.goals.savingsGoalsGraph
 import com.example.veromobile.ui.income.AddIncomeRoute
 import com.example.veromobile.ui.invoice.InvoicesScreen
 import com.example.veromobile.ui.invoice.NewInvoiceScreen
 import com.example.veromobile.ui.recurring.recurringGraph
+import com.example.veromobile.ui.recurring.navigateToRecurring
+import com.example.veromobile.ui.spending.spendingGraph
+import com.example.veromobile.ui.spending.navigateToSpending
 import kotlinx.serialization.Serializable
 import androidx.navigation.toRoute
 
+@Serializable object DashboardDestination
 @Serializable object AddExpenseDestination
 @Serializable object AddIncomeDestination
 @Serializable object InvoicesDestination
@@ -75,51 +89,102 @@ private fun AuthenticatedNavGraph(
         }
     }
 
-    NavHost(navController, startDestination = AddExpenseDestination) {
-        composable<AddExpenseDestination> {
-            // TODO: navigate back to the Dashboard once that screen exists
-            AddExpenseRoute(
-                onClose = {},
-                onSelectType = onSelectType,
-                onAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } }
-            )
-        }
-        composable<AddIncomeDestination> {
-            AddIncomeRoute(
-                onClose = { navController.popBackStack() },
-                onSelectType = onSelectType,
-                onOpenInvoices = { navController.navigate(InvoicesDestination) },
-                onNewInvoice = { navController.navigate(NewInvoiceDestination()) },
-                onAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } }
-            )
-        }
-        composable<InvoicesDestination> {
-            InvoicesScreen(
-                onBack = { navController.popBackStack() },
-                onNewInvoice = { navController.navigate(NewInvoiceDestination()) },
-                onEdit = { navController.navigate(NewInvoiceDestination(it)) }
-            )
-        }
-        composable<NewInvoiceDestination> { entry ->
-            NewInvoiceScreen(onBack = { navController.popBackStack() },
-                invoiceId = entry.toRoute<NewInvoiceDestination>().invoiceId,
-                onSaved = {
-                    if (!navController.popBackStack<InvoicesDestination>(inclusive = false)) {
-                        navController.navigate(InvoicesDestination) {
-                            popUpTo<NewInvoiceDestination> { inclusive = true }
-                            launchSingleTop = true
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val currentTab = when {
+        currentRoute?.contains("DashboardDestination") == true -> AppNavTab.DASHBOARD
+        currentRoute?.contains("SpendingDestination") == true -> AppNavTab.SPENDING
+        currentRoute?.contains("SavingsGoalsDestination") == true -> AppNavTab.GOALS
+        currentRoute?.contains("RecurringDestination") == true -> AppNavTab.RECURRING
+        else -> AppNavTab.DASHBOARD
+    }
+
+    val showBottomBar = currentRoute?.contains("AccountDestination") != true &&
+            currentRoute?.contains("NewInvoiceDestination") != true &&
+            currentRoute?.contains("InvoicesDestination") != true
+
+    Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        bottomBar = {
+            if (showBottomBar) {
+                AppBottomNavBar(
+                    currentTab = currentTab,
+                    onTabSelected = { tab ->
+                        when (tab) {
+                            AppNavTab.DASHBOARD -> navController.navigate(DashboardDestination) {
+                                popUpTo<DashboardDestination> { inclusive = false }
+                                launchSingleTop = true
+                            }
+                            AppNavTab.SPENDING -> navController.navigateToSpending()
+                            AppNavTab.GOALS -> navController.navigateToSavingsGoals()
+                            AppNavTab.RECURRING -> navController.navigateToRecurring()
+                            AppNavTab.ADD -> navController.navigate(AddExpenseDestination) { launchSingleTop = true }
                         }
+                    },
+                    onAddClick = {
+                        navController.navigate(AddExpenseDestination) { launchSingleTop = true }
                     }
-                })
+                )
+            }
         }
-        composable<AccountDestination> {
-            AccountScreen(
-                email = email,
-                onBack = { navController.popBackStack() },
-                onSignOut = onSignOut
-            )
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
+            NavHost(navController, startDestination = DashboardDestination) {
+                composable<DashboardDestination> {
+                    DashboardRoute(
+                        viewModel = hiltViewModel(),
+                        onNavigateAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } },
+                        onNavigateGoals = { navController.navigateToSavingsGoals() },
+                        onNavigateInvoices = { navController.navigate(InvoicesDestination) { launchSingleTop = true } }
+                    )
+                }
+                spendingGraph(navController)
+                recurringGraph(navController)
+                composable<AddExpenseDestination> {
+                    AddExpenseRoute(
+                        onClose = {},
+                        onSelectType = onSelectType,
+                        onAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } }
+                    )
+                }
+                composable<AddIncomeDestination> {
+                    AddIncomeRoute(
+                        onClose = { navController.popBackStack() },
+                        onSelectType = onSelectType,
+                        onOpenInvoices = { navController.navigate(InvoicesDestination) },
+                        onNewInvoice = { navController.navigate(NewInvoiceDestination()) },
+                        onAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } }
+                    )
+                }
+                composable<InvoicesDestination> {
+                    InvoicesScreen(
+                        onBack = { navController.popBackStack() },
+                        onNewInvoice = { navController.navigate(NewInvoiceDestination()) },
+                        onEdit = { navController.navigate(NewInvoiceDestination(it)) }
+                    )
+                }
+                composable<NewInvoiceDestination> { entry ->
+                    NewInvoiceScreen(onBack = { navController.popBackStack() },
+                        invoiceId = entry.toRoute<NewInvoiceDestination>().invoiceId,
+                        onSaved = {
+                            if (!navController.popBackStack<InvoicesDestination>(inclusive = false)) {
+                                navController.navigate(InvoicesDestination) {
+                                    popUpTo<NewInvoiceDestination> { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        })
+                }
+                composable<AccountDestination> {
+                    AccountScreen(
+                        email = email,
+                        onBack = { navController.popBackStack() },
+                        onSignOut = onSignOut
+                    )
+                }
+                savingsGoalsGraph(navController)
+            }
         }
-        savingsGoalsGraph(navController)
-        recurringGraph(navController)
     }
 }

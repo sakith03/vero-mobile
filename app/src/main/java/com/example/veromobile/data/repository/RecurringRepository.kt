@@ -1,10 +1,13 @@
 package com.example.veromobile.data.repository
 
 import androidx.room.withTransaction
+import com.example.veromobile.data.firestore.FirestoreCollections
+import com.example.veromobile.data.firestore.toFirestoreDto
 import com.example.veromobile.data.local.*
 import com.example.veromobile.di.RecurringClock
 import com.example.veromobile.domain.calc.RecurrenceCalculator
 import com.example.veromobile.domain.model.*
+import com.example.veromobile.domain.repository.FirestoreRepository
 import com.example.veromobile.domain.session.UserSession
 import java.time.Clock
 import java.time.LocalDate
@@ -13,7 +16,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 
 class RecurringRepository @Inject constructor(
-    private val db: AppDatabase, private val session: UserSession, @param:RecurringClock private val clock: Clock
+    private val db: AppDatabase,
+    private val firestoreRepository: FirestoreRepository,
+    private val session: UserSession,
+    @param:RecurringClock private val clock: Clock
 ) {
     // A repository belongs to the graph that created it; an old draft cannot follow a new account.
     private val boundOwner = session.userId
@@ -69,6 +75,7 @@ class RecurringRepository @Inject constructor(
             generate(user)
             checkOwner(user)
         }
+        firestoreRepository.create(FirestoreCollections.recurringRules, rule.toFirestoreDto(user))
     }
 
     /** At most 120 due rows per rule per refresh; never pre-generate future financial records. */
@@ -123,6 +130,7 @@ class RecurringRepository @Inject constructor(
             }
             checkOwner(user)
         }
+        firestoreRepository.update(FirestoreCollections.recurringRules, rule.copy(active = false).toFirestoreDto(user))
     }
 
     private suspend fun safely(block: suspend () -> Unit): Result<Unit> = try {
