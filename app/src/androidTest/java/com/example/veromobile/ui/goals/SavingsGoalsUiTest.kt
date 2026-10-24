@@ -66,7 +66,7 @@ class SavingsGoalsUiTest {
             AppDatabase::class.java, databaseName)
             .addMigrations(com.example.veromobile.data.local.GoalMigrations.MIGRATION_1_2,
                 com.example.veromobile.data.local.GoalMigrations.MIGRATION_2_3,
-                com.example.veromobile.data.local.InvoiceMigrations.MIGRATION_3_4).build()
+                com.example.veromobile.data.local.InvoiceMigrations.MIGRATION_3_4, com.example.veromobile.data.local.RecurringMigrations.MIGRATION_4_5).build()
         val roomRepository = SavingsGoalRepositoryImpl(db.goalDao(), object : UserSession { override val userId = "ui-test" }, clock)
         repository = object : SavingsGoalRepository by roomRepository {
             override fun observeGoalDetails(goalId: String, today: LocalDate): Flow<GoalResult<GoalDetails?>> =

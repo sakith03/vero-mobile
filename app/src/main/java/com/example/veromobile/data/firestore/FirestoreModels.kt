@@ -7,6 +7,9 @@ import com.example.veromobile.data.local.SavingsGoalEntity
 import com.example.veromobile.domain.model.Expense
 import com.example.veromobile.domain.model.GoalContribution
 import com.example.veromobile.domain.model.Income
+import com.example.veromobile.domain.model.Invoice
+import com.example.veromobile.domain.model.InvoiceStatus
+import com.example.veromobile.domain.model.RecurringRule
 import com.example.veromobile.domain.model.SavingsGoal
 
 /** Common fields enforced for every document under users/{uid}/{collection}/{id}. */
@@ -179,6 +182,38 @@ fun GoalContribution.toFirestoreDto(userId: String) = GoalContributionFirestoreD
     note = note,
     createdAt = createdAt,
     updatedAt = updatedAt
+)
+
+fun RecurringRule.toFirestoreDto(userId: String) = RecurringRuleFirestoreDto(
+    id = id,
+    userId = userId,
+    name = name,
+    amountMinor = amountMinor,
+    categoryId = categoryId,
+    channel = channel.name,
+    frequency = frequency.name,
+    nextDueDateEpochDay = nextDate.toEpochDay(),
+    note = "",
+    active = active,
+    createdAt = System.currentTimeMillis(),
+    updatedAt = System.currentTimeMillis(),
+    isDeleted = !active
+)
+
+fun Invoice.toFirestoreDto(userId: String) = InvoiceFirestoreDto(
+    id = id,
+    userId = userId,
+    client = client,
+    project = project,
+    milestone = milestone,
+    originalAmountMinor = amountMinor,
+    originalCurrency = currency.name,
+    dueDateEpochDay = dueDate.toEpochDay(),
+    status = status.name,
+    linkedIncomeId = receivedIncomeId,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    isDeleted = status == InvoiceStatus.VOID
 )
 
 /** Sync mappers deliberately omit Room-only pendingSync. */

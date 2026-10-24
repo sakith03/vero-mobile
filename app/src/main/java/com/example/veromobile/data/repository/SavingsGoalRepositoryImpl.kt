@@ -1,5 +1,7 @@
 package com.example.veromobile.data.repository
 
+import com.example.veromobile.data.firestore.FirestoreCollections
+import com.example.veromobile.data.firestore.toFirestoreDto
 import com.example.veromobile.data.local.GoalDao
 import com.example.veromobile.data.local.GoalWriteOutcome
 import com.example.veromobile.data.local.toDomain
@@ -12,6 +14,7 @@ import com.example.veromobile.domain.calc.GoalValidator
 import com.example.veromobile.domain.model.GoalContribution
 import com.example.veromobile.domain.model.GoalDetails
 import com.example.veromobile.domain.model.SavingsGoal
+import com.example.veromobile.domain.repository.FirestoreRepository
 import com.example.veromobile.domain.repository.GoalError
 import com.example.veromobile.domain.repository.GoalResult
 import com.example.veromobile.domain.repository.SavingsGoalRepository
@@ -27,25 +30,39 @@ import kotlinx.coroutines.flow.flow
 
 class SavingsGoalRepositoryImpl @Inject constructor(
     private val dao: GoalDao,
+    private val firestoreRepository: FirestoreRepository,
     private val session: UserSession,
     @param:GoalsClock private val clock: Clock
 ) : SavingsGoalRepository {
     override suspend fun createGoal(goal: SavingsGoal): GoalResult<Unit> = write {
         val userId = owner()
         validate(GoalValidator.validateGoal(goal))
-        outcome(dao.createGoal(goal.toEntity(userId)), GoalField.OPENING_AMOUNT)
+        val outcome = outcome(dao.createGoal(goal.toEntity(userId)), GoalField.OPENING_AMOUNT)
+        if (outcome is GoalResult.Success) {
+            firestoreRepository.create(FirestoreCollections.savingsGoals, goal.toFirestoreDto(userId))
+        }
+        outcome
     }
 
     override suspend fun editGoal(goal: SavingsGoal): GoalResult<Unit> = write {
         val userId = owner()
         validate(GoalValidator.validateGoal(goal))
-        outcome(dao.editGoal(goal.toEntity(userId).copy(updatedAt = clock.millis())), GoalField.OPENING_AMOUNT)
+        val updated = goal.copy(updatedAt = clock.millis())
+        val outcome = outcome(dao.editGoal(updated.toEntity(userId)), GoalField.OPENING_AMOUNT)
+        if (outcome is GoalResult.Success) {
+            firestoreRepository.update(FirestoreCollections.savingsGoals, updated.toFirestoreDto(userId))
+        }
+        outcome
     }
 
     override suspend fun addContribution(contribution: GoalContribution): GoalResult<Unit> = write {
         val userId = owner()
         validate(GoalValidator.validateContribution(contribution, LocalDate.now(clock)))
-        outcome(dao.addContribution(contribution.toEntity(userId)), GoalField.AMOUNT)
+        val outcome = outcome(dao.addContribution(contribution.toEntity(userId)), GoalField.AMOUNT)
+        if (outcome is GoalResult.Success) {
+            firestoreRepository.create(FirestoreCollections.goalContributions, contribution.toFirestoreDto(userId))
+        }
+        outcome
     }
 
     override fun observeGoals(): Flow<GoalResult<List<SavingsGoal>>> = flow<GoalResult<List<SavingsGoal>>> {

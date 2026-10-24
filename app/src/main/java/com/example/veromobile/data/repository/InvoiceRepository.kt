@@ -1,11 +1,14 @@
 package com.example.veromobile.data.repository
 
+import com.example.veromobile.data.firestore.FirestoreCollections
+import com.example.veromobile.data.firestore.toFirestoreDto
 import com.example.veromobile.data.local.*
 import com.example.veromobile.di.InvoiceClock
 import com.example.veromobile.domain.calc.CurrencyCalculator
 import com.example.veromobile.domain.calc.IncomeValidator
 import com.example.veromobile.domain.calc.InvoiceRules
 import com.example.veromobile.domain.model.*
+import com.example.veromobile.domain.repository.FirestoreRepository
 import com.example.veromobile.domain.session.UserSession
 import java.time.Clock
 import java.time.LocalDate
@@ -18,6 +21,7 @@ import kotlinx.coroutines.flow.collect
 
 class InvoiceRepository @Inject constructor(
     private val dao: InvoiceDao,
+    private val firestoreRepository: FirestoreRepository,
     private val session: UserSession,
     @param:InvoiceClock private val clock: Clock
 ) {
@@ -40,8 +44,10 @@ class InvoiceRepository @Inject constructor(
             CurrencyCalculator.toPlainText(invoice.amountMinor), invoice.dueDate.toString()).isEmpty()) { "Check the invoice fields" }
         val user = owner()
         val existing = dao.find(invoice.id, user)
-        dao.save(invoice.toEntity(user).copy(createdAt = existing?.createdAt ?: clock.millis(),
-            updatedAt = clock.millis(), notifiedDueEpochDay = existing?.notifiedDueEpochDay))
+        val entity = invoice.toEntity(user).copy(createdAt = existing?.createdAt ?: clock.millis(),
+            updatedAt = clock.millis(), notifiedDueEpochDay = existing?.notifiedDueEpochDay)
+        dao.save(entity)
+        firestoreRepository.create(FirestoreCollections.invoices, invoice.toFirestoreDto(user))
     }
 
     suspend fun receive(invoice: Invoice, receipt: InvoiceReceipt): Result<Unit> = safely {
@@ -59,10 +65,19 @@ class InvoiceRepository @Inject constructor(
             date = receipt.date, note = "${invoice.client} · ${invoice.project} · ${invoice.milestone}",
             invoiceId = invoice.id, updatedAt = clock.millis())
         dao.receive(invoice.id, user, invoice.revision, income.toEntity(user))
+
+        val updatedInvoice = invoice.copy(status = InvoiceStatus.RECEIVED, receivedIncomeId = income.id, updatedAt = clock.millis())
+        firestoreRepository.create(FirestoreCollections.invoices, updatedInvoice.toFirestoreDto(user))
+        firestoreRepository.create(FirestoreCollections.incomes, income.toFirestoreDto(user))
     }
 
     suspend fun void(invoice: Invoice): Result<Unit> = safely {
-        dao.voidInvoice(invoice.id, owner(), invoice.revision, clock.millis())
+        val user = owner()
+        dao.voidInvoice(invoice.id, user, invoice.revision, clock.millis())
+        val inv = find(invoice.id)
+        if (inv != null) {
+            firestoreRepository.update(FirestoreCollections.invoices, inv.toFirestoreDto(user))
+        }
     }
 
     private suspend fun safely(block: suspend () -> Unit): Result<Unit> = try {

@@ -14,16 +14,7 @@ local.properties
 
 # Intellij / Android Studio project files
 *.iml
-.idea/caches/
-.idea/libraries/
-.idea/modules.xml
-.idea/workspace.xml
-.idea/navEditor.xml
-.idea/assetWizardSettings.xml
-.idea/shelf/
-.idea/codeStyles/
-.idea/compiler.xml
-.idea/jarRepositories.xml
+.idea/
 
 # VS Code
 .vscode/

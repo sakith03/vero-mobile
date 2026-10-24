@@ -33,7 +33,7 @@ class InvoicePersistenceTest {
     @After fun cleanUp() { db.close(); files.forEach { context.deleteDatabase(it) } }
     private fun repository(owner: String = "alice") = InvoiceRepository(db.invoiceDao(), object : UserSession { override val userId = owner }, clock)
     private fun open(name: String) = Room.databaseBuilder(context, AppDatabase::class.java, name)
-        .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3, InvoiceMigrations.MIGRATION_3_4).build()
+        .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3, InvoiceMigrations.MIGRATION_3_4, RecurringMigrations.MIGRATION_4_5).build()
     private fun newName() = "invoice-test-${UUID.randomUUID()}.db".also { files.add(it) }
 
     @Test fun creationPersistsWithoutIncomeAndIsOwnerScoped() = runBlocking {
@@ -142,7 +142,7 @@ class InvoicePersistenceTest {
         repeat(2) {
             db = open(name)
             val sql = db.openHelper.writableDatabase
-            assertEquals(4, sql.version)
+            assertEquals(5, sql.version)
             tables.forEach { table -> assertEquals(before[table], sql.query("SELECT * FROM $table ORDER BY id").use(::rows)) }
             sql.query("PRAGMA foreign_key_check").use { assertEquals(0, it.count) }
             sql.query("SELECT * FROM invoices").use { assertEquals(0, it.count) }
