@@ -30,4 +30,10 @@ object AmountInput {
         val clean = text.trimEnd('.').ifEmpty { "0" }
         return BigDecimal(clean).movePointRight(2).setScale(0, RoundingMode.HALF_UP).toLong()
     }
+
+    fun sanitize(raw: String): String {
+        var out = ""
+        raw.forEach { out = append(out, it) }
+        return out
+    }
 }
