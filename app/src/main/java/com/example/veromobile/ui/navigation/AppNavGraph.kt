@@ -105,7 +105,7 @@ private fun AuthenticatedNavGraph(
             currentRoute?.contains("InvoicesDestination") != true
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Black,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
             if (showBottomBar) {
                 AppBottomNavBar(
@@ -129,7 +129,7 @@ private fun AuthenticatedNavGraph(
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Box(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
             NavHost(navController, startDestination = DashboardDestination) {
                 composable<DashboardDestination> {
                     DashboardRoute(
