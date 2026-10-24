@@ -7,6 +7,7 @@ import com.example.veromobile.data.local.ExpenseDao
 import com.example.veromobile.data.local.GoalMigrations
 import com.example.veromobile.data.local.IncomeDao
 import com.example.veromobile.data.local.InvoiceMigrations
+import com.example.veromobile.data.local.RecurringMigrations
 import com.example.veromobile.data.repository.ExpenseRepositoryImpl
 import com.example.veromobile.data.repository.FirebaseAuthRepository
 import com.example.veromobile.data.repository.FirebaseFirestoreRepository
@@ -39,7 +40,8 @@ object DatabaseModule {
     @Provides @Singleton
     fun provideDb(@ApplicationContext ctx: Context): AppDatabase =
         Room.databaseBuilder(ctx, AppDatabase::class.java, "finance.db")
-            .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3, InvoiceMigrations.MIGRATION_3_4)
+            .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3,
+                InvoiceMigrations.MIGRATION_3_4, RecurringMigrations.MIGRATION_4_5)
             .build()
 
     @Provides
