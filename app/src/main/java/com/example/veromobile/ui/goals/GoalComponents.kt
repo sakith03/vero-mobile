@@ -40,7 +40,7 @@ internal fun GoalsTheme(content: @Composable () -> Unit) {
     fun style(size: Int, bold: Boolean = false) = TextStyle(fontFamily = font, fontSize = size.sp,
         lineHeight = (size * 1.5f).sp, fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal)
     MaterialTheme(
-        colorScheme = darkColorScheme(primary = Color(0xFFE3380D), onPrimary = Color.White,
+        colorScheme = darkColorScheme(primary = Color(0xFFE8380D), onPrimary = Color.White,
             background = Color.Black, onBackground = Color.White, surface = Color(0xFF101010),
             onSurface = Color.White, surfaceVariant = Color(0xFF121212), onSurfaceVariant = Color(0xFF7A7A7A),
             outline = Color(0xFF2A2A2A), error = Color(0xFFFF7A5C)),

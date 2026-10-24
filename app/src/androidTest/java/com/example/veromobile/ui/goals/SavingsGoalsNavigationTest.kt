@@ -5,6 +5,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
@@ -16,6 +17,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.example.veromobile.ui.navigation.AddExpenseDestination
 import com.example.veromobile.MainActivity
 import com.example.veromobile.ui.navigation.AppNavGraph
+import com.example.veromobile.ui.navigation.DashboardDestination
 import com.example.veromobile.ui.theme.VeroMobileTheme
 import org.junit.Assert.*
 import org.junit.Test
@@ -25,7 +27,7 @@ import org.junit.Rule
 class SavingsGoalsNavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
-    @Test fun realAppGraphLoadsGoalsWithHiltAndReturnsToExpense() {
+    @Test fun realAppGraphGoalsReselectAndTabSwitchPreserveCreateDraft() {
         lateinit var nav: NavHostController
         compose.runOnUiThread {
             compose.activity.setContent {
@@ -34,21 +36,35 @@ class SavingsGoalsNavigationTest {
                 VeroMobileTheme { AppNavGraph(controller) }
             }
         }
-        compose.onNodeWithText("Expense").assertIsDisplayed()
         compose.runOnIdle { nav.navigateToSavingsGoals() }
-        compose.waitUntil(5000) {
-            compose.onAllNodesWithText("Savings goal").fetchSemanticsNodes().isNotEmpty() ||
-                compose.onAllNodesWithText("Savings goals").fetchSemanticsNodes().isNotEmpty()
+        compose.onNodeWithText("Savings Goals").assertIsDisplayed()
+        compose.onNodeWithText("Goal name").performTextReplacement("Keep my draft")
+        lateinit var goals: SavingsGoalsViewModel
+        compose.runOnIdle {
+            goals = ViewModelProvider(nav.getBackStackEntry(nav.graph.id))[SavingsGoalsViewModel::class.java]
+            goals.selectGoal("navigation-test-missing-goal")
         }
+        compose.waitUntil(5000) { goals.uiState.value.page == GoalPage.DETAILS }
+        // The existing navbar's Goals icon has no label; it is the next button to the right of Add.
+        val addCenter = compose.onNodeWithContentDescription("Add").fetchSemanticsNode().boundsInRoot.center
+        val goalsCenter = compose.onAllNodes(hasClickAction()).fetchSemanticsNodes()
+            .filter { it.boundsInRoot.center.x > addCenter.x && kotlin.math.abs(it.boundsInRoot.center.y - addCenter.y) < 2f }
+            .minBy { it.boundsInRoot.center.x }.boundsInRoot.center
+        compose.onRoot().performTouchInput { click(goalsCenter) }
+        compose.waitUntil(5000) { goals.uiState.value.page == GoalPage.LANDING }
         compose.runOnIdle {
             val entry = nav.currentBackStackEntry!!.id
             repeat(5) { nav.navigateToSavingsGoals() }
             assertEquals(entry, nav.currentBackStackEntry!!.id)
         }
+        compose.waitUntil(5000) { goals.uiState.value.page == GoalPage.LANDING }
+        compose.onNodeWithText("Goal name").assertTextContains("Keep my draft")
         compose.onNodeWithContentDescription("Back").performClick()
-        compose.onNodeWithText("Expense").assertIsDisplayed()
-        compose.onNodeWithText("Save expense").assertExists()
-        compose.runOnIdle { assertTrue(nav.currentDestination!!.hasRoute<AddExpenseDestination>()) }
+        compose.runOnIdle {
+            assertTrue(nav.currentDestination!!.hasRoute<DashboardDestination>())
+            nav.navigateToSavingsGoals()
+        }
+        compose.onNodeWithText("Goal name").assertTextContains("Keep my draft")
     }
 
     private fun controller(store: ViewModelStore): NavHostController =

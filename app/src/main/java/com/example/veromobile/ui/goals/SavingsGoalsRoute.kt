@@ -26,15 +26,24 @@ object SavingsGoalsDestination
 
 /** Shared entry for the future Dashboard goal card and bottom navigation goal icon. */
 fun NavController.navigateToSavingsGoals() {
-    navigate(SavingsGoalsDestination) {
-        launchSingleTop = true
-    }
+    navigate(SavingsGoalsDestination) { launchSingleTop = true }
+    currentBackStackEntry?.savedStateHandle?.set("goals.showLanding", true)
 }
 
 /** Registers the existing repository-backed UI; Add/Edit/Contribution stay within this destination. */
 fun NavGraphBuilder.savingsGoalsGraph(navController: NavController) {
-    composable<SavingsGoalsDestination> {
-        SavingsGoalsRoute(onBack = { navController.popBackStack() })
+    composable<SavingsGoalsDestination> { entry ->
+        // Keep the draft while switching tabs; the authenticated graph owns its lifetime.
+        val graphEntry = remember(entry) { navController.getBackStackEntry(navController.graph.id) }
+        val viewModel: SavingsGoalsViewModel = hiltViewModel(graphEntry)
+        val showLanding by entry.savedStateHandle.getStateFlow("goals.showLanding", false).collectAsStateWithLifecycle()
+        LaunchedEffect(showLanding) {
+            if (showLanding) {
+                viewModel.createGoal()
+                entry.savedStateHandle["goals.showLanding"] = false
+            }
+        }
+        SavingsGoalsRoute(onBack = { navController.popBackStack() }, viewModel = viewModel)
     }
 }
 
@@ -74,7 +83,8 @@ fun SavingsGoalsRoute(onBack: () -> Unit, viewModel: SavingsGoalsViewModel = hil
     val back = {
         when {
             state.contribution.isOpen -> viewModel.closeContribution()
-            state.page != GoalPage.DETAILS -> viewModel.cancelForm()
+            state.page == GoalPage.EDIT -> viewModel.cancelForm()
+            state.page == GoalPage.DETAILS -> viewModel.createGoal()
             else -> onBack()
         }
     }
@@ -85,18 +95,20 @@ fun SavingsGoalsRoute(onBack: () -> Unit, viewModel: SavingsGoalsViewModel = hil
                 snackbarHost = { SnackbarHost(snackbar) }) { padding ->
                 Box(Modifier.fillMaxSize().padding(padding).padding(top = 4.dp)) {
                     when {
-                        state.page != GoalPage.DETAILS -> GoalFormScreen(state.form, state.page == GoalPage.EDIT,
+                        state.page == GoalPage.LANDING -> GoalLandingScreen(state, viewModel.today(),
+                            viewModel::changeGoalField, viewModel::saveGoal, viewModel::selectGoal, viewModel::retry, onBack)
+                        state.page == GoalPage.EDIT -> GoalFormScreen(state.form, true,
                             viewModel.today(), viewModel::changeGoalField, viewModel::saveGoal, back)
                         state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
                         state.error != null -> GoalStatusScreen("Couldn't load savings goals", state.error!!,
-                            "Retry", viewModel::retry, onBack)
+                            "Retry", viewModel::retry, back)
                         state.details == null -> GoalStatusScreen("Make room for your next goal",
                             if (state.goals.isEmpty()) "Set a target, add what you've already saved, and build from there."
                             else "This goal is no longer available. Choose another goal or create a new one.",
-                            "Create goal", viewModel::createGoal, onBack)
-                        else -> GoalDetailsScreen(state.details!!, state.goals, viewModel.today(), onBack, viewModel::editGoal,
+                            "My Goals", viewModel::createGoal, back)
+                        else -> GoalDetailsScreen(state.details!!, state.goals, viewModel.today(), back, viewModel::editGoal,
                             viewModel::selectGoal, viewModel::createGoal, viewModel::openContribution)
                     }
                 }
