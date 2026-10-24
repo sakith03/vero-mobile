@@ -161,11 +161,20 @@ class GoalsPersistenceTest {
         assertEquals(Long.MAX_VALUE, details()!!.summary.currentSavingsMinor)
     }
 
-    @Test fun closedDatabaseReturnsStorageError() = runBlocking {
-        // Open it before closing; a closed Room instance must not accept new writes.
+    @Test fun failedGoalUpdateReturnsStorageAndPreservesHistory() = runBlocking {
+        // Using Room after close is unsupported and can reopen an empty in-memory DB.
+        // A SQLite trigger gives a deterministic storage error on an otherwise valid edit.
         repository().createGoal(goal)
-        db.close()
-        assertEquals(GoalResult.Failure(GoalError.Storage), repository().addContribution(contribution))
+        repository().addContribution(contribution)
+        db.openHelper.writableDatabase.execSQL("""CREATE TRIGGER reject_goal_update BEFORE UPDATE
+            ON savings_goals BEGIN SELECT RAISE(ABORT, 'test update failure'); END""")
+        assertEquals(GoalResult.Failure(GoalError.Storage), repository().editGoal(goal.copy(name = "Updated")))
+        assertEquals(goal, details()!!.goal)
+        assertEquals(listOf(contribution), details()!!.contributions)
+        db.openHelper.writableDatabase.execSQL("DROP TRIGGER reject_goal_update")
+        assertEquals(GoalResult.Success(Unit), repository().editGoal(goal.copy(name = "Updated")))
+        assertEquals("Updated", details()!!.goal.name)
+        assertEquals(listOf(contribution), details()!!.contributions)
     }
 
     @Test fun databaseWriteFailurePreservesRecordsAndAllowsRetry() = runBlocking {
@@ -218,12 +227,12 @@ class GoalsPersistenceTest {
         assertEquals(listOf(contribution), details()!!.contributions)
     }
 
-    @Test fun migrationValidatesVersionTwoAndPreservesEveryExpenseColumn() = runBlocking {
+    @Test fun migrationValidatesVersionFourAndPreservesEveryExpenseColumn() = runBlocking {
         db.close()
         val name = "goals-migration-${UUID.randomUUID()}.db".also { files.add(it) }
         val file = context.getDatabasePath(name)
         file.parentFile!!.mkdirs()
-        // Exact v1 expenses schema from ExpenseEntity. Room itself validates the v2 schema
+        // Exact v1 expenses schema from ExpenseEntity. Room itself validates the v4 schema
         // on migration, so no new testing dependency or generated v1 schema is needed.
         SQLiteDatabase.openOrCreateDatabase(file, null).use { old ->
             old.execSQL("""CREATE TABLE expenses (id TEXT NOT NULL PRIMARY KEY, userId TEXT NOT NULL,
@@ -250,7 +259,7 @@ class GoalsPersistenceTest {
             assertEquals("Lunch", rows.getString(6)); assertEquals(123L, rows.getLong(7))
             assertEquals(0, rows.getInt(8)); assertEquals(1, rows.getInt(9))
         }
-        assertEquals(2, db.openHelper.writableDatabase.version)
+        assertEquals(4, db.openHelper.writableDatabase.version)
         assertEquals("food", db.expenseDao().lastCategoryForNote("alice", "Lunch"))
         assertEquals(GoalResult.Success(Unit), repository().createGoal(goal))
         assertEquals(GoalResult.Success(Unit), repository().addContribution(contribution))
@@ -261,5 +270,5 @@ class GoalsPersistenceTest {
     }
 
     private fun openFile(name: String) = Room.databaseBuilder(context, AppDatabase::class.java, name)
-        .addMigrations(GoalMigrations.MIGRATION_1_2).build()
+        .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3, InvoiceMigrations.MIGRATION_3_4).build()
 }

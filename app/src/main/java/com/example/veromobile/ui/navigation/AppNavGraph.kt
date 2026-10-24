@@ -20,11 +20,12 @@ import com.example.veromobile.ui.income.AddIncomeRoute
 import com.example.veromobile.ui.invoice.InvoicesScreen
 import com.example.veromobile.ui.invoice.NewInvoiceScreen
 import kotlinx.serialization.Serializable
+import androidx.navigation.toRoute
 
 @Serializable object AddExpenseDestination
 @Serializable object AddIncomeDestination
 @Serializable object InvoicesDestination
-@Serializable object NewInvoiceDestination
+@Serializable data class NewInvoiceDestination(val invoiceId: String? = null)
 @Serializable object AccountDestination
 
 @Composable
@@ -87,18 +88,28 @@ private fun AuthenticatedNavGraph(
                 onClose = { navController.popBackStack() },
                 onSelectType = onSelectType,
                 onOpenInvoices = { navController.navigate(InvoicesDestination) },
-                onNewInvoice = { navController.navigate(NewInvoiceDestination) },
+                onNewInvoice = { navController.navigate(NewInvoiceDestination()) },
                 onAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } }
             )
         }
         composable<InvoicesDestination> {
             InvoicesScreen(
                 onBack = { navController.popBackStack() },
-                onNewInvoice = { navController.navigate(NewInvoiceDestination) }
+                onNewInvoice = { navController.navigate(NewInvoiceDestination()) },
+                onEdit = { navController.navigate(NewInvoiceDestination(it)) }
             )
         }
-        composable<NewInvoiceDestination> {
-            NewInvoiceScreen(onBack = { navController.popBackStack() })
+        composable<NewInvoiceDestination> { entry ->
+            NewInvoiceScreen(onBack = { navController.popBackStack() },
+                invoiceId = entry.toRoute<NewInvoiceDestination>().invoiceId,
+                onSaved = {
+                    if (!navController.popBackStack<InvoicesDestination>(inclusive = false)) {
+                        navController.navigate(InvoicesDestination) {
+                            popUpTo<NewInvoiceDestination> { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                })
         }
         composable<AccountDestination> {
             AccountScreen(
