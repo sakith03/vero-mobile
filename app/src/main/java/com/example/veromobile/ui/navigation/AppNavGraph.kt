@@ -14,7 +14,9 @@ import com.example.veromobile.ui.auth.AccountScreen
 import com.example.veromobile.ui.auth.AuthLoadingScreen
 import com.example.veromobile.ui.auth.AuthScreen
 import com.example.veromobile.ui.auth.AuthViewModel
+import com.example.veromobile.ui.dashboard.DashboardRoute
 import com.example.veromobile.ui.expense.AddExpenseRoute
+import com.example.veromobile.ui.goals.navigateToSavingsGoals
 import com.example.veromobile.ui.goals.savingsGoalsGraph
 import com.example.veromobile.ui.income.AddIncomeRoute
 import com.example.veromobile.ui.invoice.InvoicesScreen
@@ -22,6 +24,7 @@ import com.example.veromobile.ui.invoice.NewInvoiceScreen
 import kotlinx.serialization.Serializable
 import androidx.navigation.toRoute
 
+@Serializable object DashboardDestination
 @Serializable object AddExpenseDestination
 @Serializable object AddIncomeDestination
 @Serializable object InvoicesDestination
@@ -74,9 +77,16 @@ private fun AuthenticatedNavGraph(
         }
     }
 
-    NavHost(navController, startDestination = AddExpenseDestination) {
+    NavHost(navController, startDestination = DashboardDestination) {
+        composable<DashboardDestination> {
+            DashboardRoute(
+                viewModel = hiltViewModel(),
+                onNavigateAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } },
+                onNavigateGoals = { navController.navigateToSavingsGoals() },
+                onNavigateInvoices = { navController.navigate(InvoicesDestination) { launchSingleTop = true } }
+            )
+        }
         composable<AddExpenseDestination> {
-            // TODO: navigate back to the Dashboard once that screen exists
             AddExpenseRoute(
                 onClose = {},
                 onSelectType = onSelectType,
