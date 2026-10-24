@@ -20,6 +20,7 @@ import com.example.veromobile.ui.expense.components.NumericKeypad
 fun AddExpenseRoute(
     onClose: () -> Unit,
     onSelectType: (EntryType) -> Unit,
+    onAccount: () -> Unit = {},
     viewModel: AddExpenseViewModel = hiltViewModel()    // injected, never constructed manually
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -36,6 +37,7 @@ fun AddExpenseRoute(
 
     AddExpenseScreen(
         state = state, snackbarHostState = snackbar, onClose = onClose, onSelectType = onSelectType,
+        onAccount = onAccount,
         onKey = viewModel::onKey, onBackspace = viewModel::onBackspace,
         onCategory = viewModel::onCategorySelected, onChannel = viewModel::onChannelSelected,
         onNote = viewModel::onNoteChanged, onSave = viewModel::onSave
@@ -49,6 +51,7 @@ fun AddExpenseScreen(
     snackbarHostState: SnackbarHostState,
     onClose: () -> Unit,
     onSelectType: (EntryType) -> Unit,
+    onAccount: () -> Unit = {},
     onKey: (Char) -> Unit,
     onBackspace: () -> Unit,
     onCategory: (String) -> Unit,
@@ -67,7 +70,7 @@ fun AddExpenseScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Top bar: close + type tabs (only Expense works for now)
-            EntryTypeTopBar(EntryType.EXPENSE, onClose, onSelectType)
+            EntryTypeTopBar(EntryType.EXPENSE, onClose, onSelectType, onAccount)
 
             // Amount header
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
