@@ -21,7 +21,7 @@ class RoomMigrationTest {
 
     @After fun cleanUp() { files.forEach { context.deleteDatabase(it) } }
 
-    @Test fun freshVersionThreeOpensAndReopens() {
+    @Test fun freshVersionFourOpensAndReopens() {
         val name = newName()
         repeat(2) {
             withDatabase(name) { db ->
@@ -89,7 +89,7 @@ class RoomMigrationTest {
 
     private fun open(name: String): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3)
+            .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3, InvoiceMigrations.MIGRATION_3_4)
             .build()
 
     private inline fun withDatabase(name: String, block: (AppDatabase) -> Unit) {
@@ -111,7 +111,7 @@ class RoomMigrationTest {
 
     private fun assertSchema(db: AppDatabase) {
         val sql = db.openHelper.writableDatabase
-        assertEquals(3, sql.version)
+        assertEquals(4, sql.version)
         sql.query("PRAGMA foreign_keys").use { rows ->
             assertTrue(rows.moveToFirst())
             assertEquals(1, rows.getInt(0))
@@ -130,7 +130,8 @@ class RoomMigrationTest {
         }
         val expectedIndexes = setOf("index_incomes_userId_dateEpochDay", "index_savings_goals_userId",
             "index_savings_goals_id_userId", "index_goal_contributions_userId",
-            "index_goal_contributions_goalId_userId")
+            "index_goal_contributions_goalId_userId", "index_invoices_userId_dueDateEpochDay",
+            "index_invoices_receivedIncomeId")
         sql.query("SELECT name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%'").use { rows ->
             val actual = mutableSetOf<String>()
             while (rows.moveToNext()) actual.add(rows.getString(0))
