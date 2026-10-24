@@ -16,7 +16,12 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
     NavHost(navController, startDestination = AddExpenseDestination) {
         composable<AddExpenseDestination> {
             // TODO: navigate back to the Dashboard once that screen exists
-            AddExpenseRoute(onClose = {})
+            AddExpenseRoute(
+                onClose = {},
+                onSelectType = { type ->
+                    // Handle navigation between entry types if needed
+                }
+            )
         }
         savingsGoalsGraph(navController)
     }
