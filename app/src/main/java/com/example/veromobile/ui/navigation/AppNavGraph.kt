@@ -19,6 +19,7 @@ import com.example.veromobile.ui.goals.savingsGoalsGraph
 import com.example.veromobile.ui.income.AddIncomeRoute
 import com.example.veromobile.ui.invoice.InvoicesScreen
 import com.example.veromobile.ui.invoice.NewInvoiceScreen
+import com.example.veromobile.ui.recurring.recurringGraph
 import kotlinx.serialization.Serializable
 import androidx.navigation.toRoute
 
@@ -119,5 +120,6 @@ private fun AuthenticatedNavGraph(
             )
         }
         savingsGoalsGraph(navController)
+        recurringGraph(navController)
     }
 }
