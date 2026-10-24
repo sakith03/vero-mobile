@@ -35,6 +35,7 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets.getByName("androidTest").assets.srcDir("schemas")
 }
 
 // Retain Room's generated schema from version 3 onwards; older versions were not exported.
