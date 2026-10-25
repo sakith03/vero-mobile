@@ -128,6 +128,12 @@ fun AuthScreen(
                     else "Every rupee, every source, one goal.", Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center)
+                if (state.isOffline) {
+                    Spacer(Modifier.height(12.dp))
+                    Text("You're offline. Connect to the internet to sign in or create an account.",
+                        Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFF47422), textAlign = TextAlign.Center)
+                }
                 Spacer(Modifier.height(if (compact) 24.dp else 32.dp))
                 EmailField(state, onEmailChanged)
                 if (state.screen != AuthScreen.FORGOT_PASSWORD) {
