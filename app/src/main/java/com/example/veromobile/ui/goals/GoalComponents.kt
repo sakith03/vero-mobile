@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.veromobile.R
 import com.example.veromobile.domain.calc.GoalValidator
+import com.example.veromobile.ui.components.FeatureScreen
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -35,19 +36,17 @@ internal val GoalOrange = Color(0xFFF47422)
 internal val GoalBorder = Color(0xFF1E1E1E)
 
 @Composable
-internal fun GoalsTheme(content: @Composable () -> Unit) {
-    val font = FontFamily(Font(R.font.goal_poppins_regular), Font(R.font.goal_poppins_semibold, FontWeight.SemiBold))
-    fun style(size: Int, bold: Boolean = false) = TextStyle(fontFamily = font, fontSize = size.sp,
-        lineHeight = (size * 1.5f).sp, fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal)
+internal fun GoalsTheme(content: @Composable () -> Unit) = FeatureScreen {
     MaterialTheme(
-        colorScheme = darkColorScheme(primary = Color(0xFFE8380D), onPrimary = Color.White,
+        colorScheme = MaterialTheme.colorScheme.copy(primary = Color(0xFFE8380D), onPrimary = Color.White,
             background = Color.Black, onBackground = Color.White, surface = Color(0xFF101010),
             onSurface = Color.White, surfaceVariant = Color(0xFF121212), onSurfaceVariant = Color(0xFF7A7A7A),
             outline = Color(0xFF2A2A2A), error = Color(0xFFFF7A5C)),
-        typography = Typography(bodyLarge = style(16), bodyMedium = style(14), bodySmall = style(12),
-            titleLarge = style(20, true), titleMedium = style(16, true), titleSmall = style(14, true),
-            headlineLarge = style(36, true), headlineMedium = style(26, true), headlineSmall = style(24, true),
-            labelLarge = style(16, true), labelMedium = style(13), labelSmall = style(11)),
+        typography = MaterialTheme.typography.copy(
+            headlineLarge = MaterialTheme.typography.headlineLarge.copy(fontSize = 36.sp, lineHeight = 54.sp),
+            labelLarge = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp),
+            labelMedium = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
+            labelSmall = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp)),
         content = content
     )
 }
@@ -86,8 +85,10 @@ internal fun GoalHeader(title: String, onBack: () -> Unit, action: String? = nul
 internal fun GoalPrimaryButton(label: String, onClick: () -> Unit, enabled: Boolean = true, saving: Boolean = false) {
     Button(onClick = onClick, enabled = enabled && !saving, shape = CircleShape,
         modifier = Modifier.fillMaxWidth().height(56.dp)) {
-        if (saving) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
-        else Text(label)
+        if (saving) {
+            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+            Spacer(Modifier.width(8.dp)); Text("Saving…")
+        } else Text(label)
     }
 }
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.veromobile.domain.calc.GoalField
+import com.example.veromobile.ui.components.FeatureAmount
 import java.time.LocalDate
 
 @Composable
@@ -55,7 +56,7 @@ internal fun GoalLandingScreen(state: SavingsGoalsUiState, today: LocalDate,
                                onChange: (GoalField, String) -> Unit, onSave: () -> Unit,
                                onSelect: (String) -> Unit, onRetry: () -> Unit, onBack: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().imePadding().testTag("goals-landing"),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 120.dp),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item(key = "heading") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -100,7 +101,7 @@ internal fun GoalLandingScreen(state: SavingsGoalsUiState, today: LocalDate,
                     shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, GoalBorder)) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(goal.name, style = MaterialTheme.typography.titleMedium)
-                        Text(goalMoney(goal.targetAmountMinor), style = MaterialTheme.typography.titleLarge)
+                        FeatureAmount(goalMoney(goal.targetAmountMinor))
                         Text("Target date: ${goal.targetDate}", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("View Details →", style = MaterialTheme.typography.labelMedium, color = Color(0xFFE8380D))

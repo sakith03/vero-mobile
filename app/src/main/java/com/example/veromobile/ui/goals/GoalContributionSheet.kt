@@ -18,7 +18,7 @@ fun GoalContributionSheet(state: ContributionFormState, today: LocalDate,
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
             confirmValueChange = { !state.isSaving || it != SheetValue.Hidden })) {
-        Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp),
+        Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Add a contribution", style = MaterialTheme.typography.titleLarge)
             Text("Counts toward the goal, not as an expense.", style = MaterialTheme.typography.bodySmall,

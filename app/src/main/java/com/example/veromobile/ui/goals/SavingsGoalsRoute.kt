@@ -89,6 +89,7 @@ fun SavingsGoalsRoute(onBack: () -> Unit, viewModel: SavingsGoalsViewModel = hil
         }
     }
     BackHandler(onBack = back)
+    BackHandler(state.form.isSaving || state.contribution.isSaving) { }
     GoalsTheme {
         Box(Modifier.fillMaxSize().goalBackground()) {
             Scaffold(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onBackground,
