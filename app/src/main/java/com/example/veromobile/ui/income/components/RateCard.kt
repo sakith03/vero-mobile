@@ -20,7 +20,8 @@ fun RateCard(
     derivedRateLabel: String,
     lastRateLabel: String?,
     onUseLast: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Surface(
         modifier.fillMaxWidth(),
@@ -40,7 +41,7 @@ fun RateCard(
                 )
             }
             if (lastRateLabel != null) {
-                OutlinedButton(onClick = onUseLast) {
+                OutlinedButton(onClick = onUseLast, enabled = enabled) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Use last", style = MaterialTheme.typography.labelSmall)
                         Text(lastRateLabel, style = MaterialTheme.typography.labelMedium)
