@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.veromobile.core.AppTime
 import com.example.veromobile.data.repository.RecurringRepository
+import com.example.veromobile.data.repository.LocalOnlyFirestoreRepository
 import com.example.veromobile.domain.calc.RecurrenceCalculator
 import com.example.veromobile.domain.model.*
 import com.example.veromobile.domain.session.UserSession
@@ -29,7 +30,7 @@ class RecurringPersistenceTest {
     }
     private val today get() = LocalDate.now(clock)
     private val names = mutableListOf<String>()
-    private fun repo() = RecurringRepository(db, session, clock)
+    private fun repo() = RecurringRepository(db, LocalOnlyFirestoreRepository, session, clock)
     private fun rule(id: String = "rule-a", kind: RecurringKind = RecurringKind.BILL) = RecurringRule(id,
         "Electricity", 12_500, RecurringFrequency.MONTHLY, today, "utilities", PaymentChannel.BANK_TRANSFER, kind)
     private fun count(table: String) = db.openHelper.writableDatabase.query("SELECT COUNT(*) FROM $table").use { it.moveToFirst(); it.getInt(0) }
