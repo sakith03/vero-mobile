@@ -22,7 +22,7 @@ data class InvoiceForm(
     val client: String = "", val project: String = "", val milestone: String = "",
     val amount: String = "", val currency: Currency = Currency.LKR, val due: String = "",
     val errors: Map<String, String> = emptyMap(), val error: String? = null,
-    val loading: Boolean = false, val saving: Boolean = false
+    val loading: Boolean = false, val saving: Boolean = false, val openFailed: Boolean = false
 )
 data class InvoiceListState(
     val invoices: List<Invoice> = emptyList(), val loading: Boolean = true,
@@ -83,7 +83,7 @@ class InvoiceViewModel @Inject constructor(private val repository: InvoiceReposi
                 persistForm(id ?: draftId)
                 formReady = true
             } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-            catch (_: Exception) { _form.update { it.copy(loading = false, error = "Couldn't open this invoice. Go back and reopen it.") } }
+            catch (_: Exception) { _form.update { it.copy(loading = false, openFailed = true, error = "Couldn't open this invoice. Go back and reopen it.") } }
         }
     }
 
