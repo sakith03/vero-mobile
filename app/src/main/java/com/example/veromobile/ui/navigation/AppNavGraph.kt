@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
@@ -18,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.veromobile.ui.components.EntryType
 import com.example.veromobile.ui.components.AppBottomNavBar
 import com.example.veromobile.ui.components.AppNavTab
+import com.example.veromobile.ui.components.LocalFeatureInsets
 import com.example.veromobile.ui.auth.AccountScreen
 import com.example.veromobile.ui.auth.AuthLoadingScreen
 import com.example.veromobile.ui.auth.AuthScreen
@@ -84,7 +86,9 @@ private fun AuthenticatedNavGraph(
 ) {
     val onSelectType: (EntryType) -> Unit = { type ->
         when (type) {
-            EntryType.EXPENSE -> navController.popBackStack<AddExpenseDestination>(inclusive = false)
+            EntryType.EXPENSE -> if (!navController.popBackStack<AddExpenseDestination>(inclusive = false)) {
+                navController.navigate(AddExpenseDestination) { launchSingleTop = true }
+            }
             EntryType.INCOME -> navController.navigate(AddIncomeDestination) { launchSingleTop = true }
         }
     }
@@ -97,15 +101,18 @@ private fun AuthenticatedNavGraph(
         currentRoute?.contains("SpendingDestination") == true -> AppNavTab.SPENDING
         currentRoute?.contains("SavingsGoalsDestination") == true -> AppNavTab.GOALS
         currentRoute?.contains("RecurringDestination") == true -> AppNavTab.RECURRING
+        currentRoute?.contains("AddExpenseDestination") == true || currentRoute?.contains("AddIncomeDestination") == true -> AppNavTab.ADD
         else -> AppNavTab.DASHBOARD
     }
 
     val showBottomBar = currentRoute?.contains("AccountDestination") != true &&
+            currentRoute?.contains("AddExpenseDestination") != true &&
+            currentRoute?.contains("AddIncomeDestination") != true &&
             currentRoute?.contains("NewInvoiceDestination") != true &&
             currentRoute?.contains("InvoicesDestination") != true
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        containerColor = androidx.compose.ui.graphics.Color.Black,
         bottomBar = {
             if (showBottomBar) {
                 AppBottomNavBar(
@@ -130,12 +137,14 @@ private fun AuthenticatedNavGraph(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
+            CompositionLocalProvider(LocalFeatureInsets provides innerPadding) {
             NavHost(navController, startDestination = DashboardDestination) {
                 composable<DashboardDestination> {
                     DashboardRoute(
                         viewModel = hiltViewModel(),
                         onNavigateAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } },
                         onNavigateGoals = { navController.navigateToSavingsGoals() },
+                        accountLabel = email ?: "Your account",
                         onNavigateInvoices = { navController.navigate(InvoicesDestination) { launchSingleTop = true } }
                     )
                 }
@@ -143,7 +152,7 @@ private fun AuthenticatedNavGraph(
                 recurringGraph(navController)
                 composable<AddExpenseDestination> {
                     AddExpenseRoute(
-                        onClose = {},
+                        onClose = { navController.popBackStack() },
                         onSelectType = onSelectType,
                         onAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } }
                     )
@@ -184,6 +193,7 @@ private fun AuthenticatedNavGraph(
                     )
                 }
                 savingsGoalsGraph(navController)
+            }
             }
         }
     }
