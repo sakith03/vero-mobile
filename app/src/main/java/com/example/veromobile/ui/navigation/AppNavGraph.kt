@@ -148,7 +148,9 @@ private fun AuthenticatedNavGraph(
                         onNavigateInvoices = { navController.navigate(InvoicesDestination) { launchSingleTop = true } }
                     )
                 }
-                spendingGraph(navController)
+                spendingGraph(navController) {
+                    navController.navigate(AddExpenseDestination) { launchSingleTop = true }
+                }
                 recurringGraph(navController)
                 composable<AddExpenseDestination> {
                     AddExpenseRoute(
