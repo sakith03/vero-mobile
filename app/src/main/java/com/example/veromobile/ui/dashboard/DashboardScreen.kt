@@ -1,7 +1,6 @@
 package com.example.veromobile.ui.dashboard
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,483 +8,166 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.veromobile.domain.calc.InvoiceRules
+import com.example.veromobile.domain.model.GoalDetails
+import com.example.veromobile.domain.model.InvoiceStatus
+import com.example.veromobile.ui.components.*
+import com.example.veromobile.ui.goals.SavingsGoalsViewModel
+import com.example.veromobile.ui.goals.goalMoney
+import com.example.veromobile.ui.invoice.InvoiceListState
+import com.example.veromobile.ui.invoice.InvoiceViewModel
+import kotlinx.coroutines.launch
+import java.math.BigDecimal
 
 @Composable
-fun DashboardRoute(
-    viewModel: DashboardViewModel,
-    onNavigateAccount: () -> Unit,
-    onNavigateGoals: () -> Unit,
-    onNavigateInvoices: () -> Unit
-) {
+fun DashboardRoute(viewModel: DashboardViewModel, onNavigateAccount: () -> Unit,
+    onNavigateGoals: () -> Unit, onNavigateInvoices: () -> Unit, accountLabel: String = "Your account",
+    goalsViewModel: SavingsGoalsViewModel = hiltViewModel(), invoicesViewModel: InvoiceViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    DashboardScreen(
-        state = state,
-        onSalaryChanged = viewModel::onSalaryInputChanged,
-        onConfirmSalary = viewModel::confirmSalary,
-        onPreviousMonth = viewModel::previousMonth,
-        onNextMonth = viewModel::nextMonth,
-        onNavigateAccount = onNavigateAccount,
-        onNavigateGoals = onNavigateGoals,
-        onNavigateInvoices = onNavigateInvoices
-    )
+    val goals by goalsViewModel.uiState.collectAsStateWithLifecycle()
+    val invoices by invoicesViewModel.list.collectAsStateWithLifecycle()
+    val firstGoal = goals.goals.firstOrNull()?.id
+    LaunchedEffect(firstGoal) { firstGoal?.let(goalsViewModel::selectGoal) }
+    DashboardScreen(state, viewModel::onSalaryInputChanged, viewModel::confirmSalary,
+        viewModel::previousMonth, viewModel::nextMonth, onNavigateAccount, onNavigateGoals, onNavigateInvoices,
+        accountLabel, goals.details, goals.isLoading, goals.error, invoices, viewModel::retry)
 }
 
 @Composable
-fun DashboardScreen(
-    state: DashboardUiState,
-    onSalaryChanged: (String) -> Unit,
-    onConfirmSalary: () -> Unit,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    onNavigateAccount: () -> Unit,
-    onNavigateGoals: () -> Unit,
-    onNavigateInvoices: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header & Surplus Gradient Card
+fun DashboardScreen(state: DashboardUiState, onSalaryChanged: (String) -> Unit,
+    onConfirmSalary: () -> Unit, onPreviousMonth: () -> Unit, onNextMonth: () -> Unit,
+    onNavigateAccount: () -> Unit, onNavigateGoals: () -> Unit, onNavigateInvoices: () -> Unit,
+    accountLabel: String = "Your account", goal: GoalDetails? = null, goalLoading: Boolean = false,
+    goalError: String? = null, invoices: InvoiceListState = InvoiceListState(), onRetry: () -> Unit = {}) = FeatureScreen {
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val unavailable: (String) -> Unit = { scope.launch { snackbar.showSnackbar("$it isn't available yet.") } }
+    Scaffold(containerColor = Color.Black, contentColor = Color.White,
+        snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+        LazyColumn(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),
+            contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(bottomStart = 34.dp, bottomEnd = 34.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(0xFFE3380D),
-                                    Color(0xFF9A2406),
-                                    Color(0xFF541100)
-                                )
-                            )
-                        )
-                        .padding(horizontal = 20.dp, vertical = 24.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(18.dp)
-                    ) {
-                        // User Profile & Actions
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF1A1A1A))
-                                        .border(2.dp, Color.White.copy(alpha = 0.9f), CircleShape)
-                                        .clickable { onNavigateAccount() },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "KS",
-                                        color = Color.White,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                                Column {
-                                    Text(
-                                        text = "Good evening",
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 12.sp
-                                    )
-                                    Text(
-                                        text = state.userName,
-                                        color = Color.White,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                IconButton(
-                                    onClick = { },
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.14f))
-                                ) {
-                                    Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
-                                }
-                                IconButton(
-                                    onClick = { },
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.14f))
-                                ) {
-                                    Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
-                                }
-                            }
+                Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(FeatureOrange,
+                    Color(0xFF9A2406), Color(0xFF541100))), RoundedCornerShape(bottomStart = 34.dp, bottomEnd = 34.dp))
+                    .padding(horizontal = 18.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onNavigateAccount, Modifier.size(48.dp).background(Color.Black.copy(alpha = .25f), CircleShape)) {
+                            Icon(Icons.Default.AccountCircle, "Account", tint = Color.White)
                         }
-
-                        // Month Selector
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Button(
-                                onClick = onPreviousMonth,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.2f)),
-                                modifier = Modifier.size(width = 48.dp, height = 40.dp),
-                                shape = RoundedCornerShape(99.dp)
-                            ) {
-                                Text("‹", color = Color.White, fontSize = 18.sp)
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = state.monthLabel,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Button(
-                                onClick = onNextMonth,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.2f)),
-                                modifier = Modifier.size(width = 48.dp, height = 40.dp),
-                                shape = RoundedCornerShape(99.dp)
-                            ) {
-                                Text("›", color = Color.White, fontSize = 18.sp)
-                            }
+                        Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                            Text("Your overview", style = MaterialTheme.typography.bodySmall)
+                            Text(accountLabel, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-
-                        // Surplus Display
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Surplus this month",
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontSize = 13.sp
-                            )
-                            Text(
-                                text = state.surplus,
-                                color = Color.White,
-                                fontSize = 38.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.02).sp
-                            )
-                        }
-
-                        // Income / Expenses Summary Row
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .background(Color.Black.copy(alpha = 0.22f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
-                                    .padding(12.dp)
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("Received income", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
-                                    Text(state.receivedIncome, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .background(Color.Black.copy(alpha = 0.22f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
-                                    .padding(12.dp)
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("Expenses", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
-                                    Text(state.expenses, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
-
-                        // Sub-metrics
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Expected, not received · ${state.expectedNotReceived}", color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
-                            Text("Crypto P/L · ${state.cryptoPl}", color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
-                        }
+                        IconButton({ unavailable("Search") }, Modifier.size(48.dp)) { Icon(Icons.Default.Search, "Search") }
+                        IconButton({ unavailable("Notifications") }, Modifier.size(48.dp)) { Icon(Icons.Default.Notifications, "Notifications") }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onPreviousMonth) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous month") }
+                        Text(state.monthLabel, Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
+                        IconButton(onNextMonth) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next month") }
+                    }
+                    Text("Surplus this month", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+                    FeatureAmount(if (state.isLoading || state.summaryError) "—" else state.surplus, large = true, color = Color.White)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        HeroMetric("Received income", if (state.isLoading || state.summaryError) "—" else state.receivedIncome, Modifier.weight(1f))
+                        HeroMetric("Expenses", if (state.isLoading || state.summaryError) "—" else state.expenses, Modifier.weight(1f))
+                    }
+                    TextButton(onNavigateInvoices, Modifier.heightIn(min = 48.dp)) {
+                        Text("Expected invoices · " + invoiceTotal(invoices, InvoiceStatus.EXPECTED), color = Color.White,
+                            style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
-
-            // Body Content Items
+            if (state.isLoading) item { LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) }
+            if (state.summaryError) item { Box(Modifier.padding(horizontal = 18.dp)) {
+                FeatureState("Couldn't load your overview", "Your account's income or expense data is unavailable.", "Retry", onRetry)
+            } }
+            if (state.showSalaryBanner) item {
+                Column(Modifier.padding(horizontal = 18.dp).fillMaxWidth()
+                    .background(Brush.horizontalGradient(listOf(FeatureOrange, FeatureWarm)), RoundedCornerShape(24.dp))
+                    .padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Salary received?", style = MaterialTheme.typography.titleMedium)
+                    Text("Enter the actual amount that arrived.", style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(state.salaryInput, onSalaryChanged, Modifier.fillMaxWidth(),
+                        label = { Text("Actual salary (LKR)") }, singleLine = true, enabled = !state.salarySaving,
+                        isError = state.salaryError != null, shape = RoundedCornerShape(14.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        colors = featureFieldColors())
+                    state.salaryError?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    Button(onConfirmSalary, Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        enabled = !state.salarySaving && state.salaryInput.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White)) {
+                        Text(if (state.salarySaving) "Saving…" else "Confirm salary")
+                    }
+                }
+            }
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    // Pay day salary confirmation banner
-                    if (state.showSalaryBanner) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colors = listOf(Color(0xFFE3380D), Color(0xFFF47422))
-                                    )
-                                )
-                                .padding(16.dp)
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                Brush.radialGradient(
-                                                    colors = listOf(Color(0xFFFFD9BC), Color(0xFFF47422), Color(0xFFE3380D), Color(0xFF6A1602))
-                                                )
-                                            )
-                                    )
-                                    Column {
-                                        Text("Pay day: confirm October salary", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                        Text("Expected LKR 135,000. Enter what arrived.", color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp)
-                                    }
-                                }
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedTextField(
-                                        value = state.salaryInput,
-                                        onValueChange = onSalaryChanged,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(48.dp),
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedContainerColor = Color.Black.copy(alpha = 0.28f),
-                                            unfocusedContainerColor = Color.Black.copy(alpha = 0.28f),
-                                            focusedBorderColor = Color.Transparent,
-                                            unfocusedBorderColor = Color.Transparent,
-                                            focusedTextColor = Color.White,
-                                            unfocusedTextColor = Color.White
-                                        ),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        singleLine = true
-                                    )
-                                    Button(
-                                        onClick = onConfirmSalary,
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-                                        shape = RoundedCornerShape(14.dp),
-                                        modifier = Modifier.height(48.dp)
-                                    ) {
-                                        Text("Confirm", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
+                Column(Modifier.padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    FeaturePanel(Modifier.clickable(onClick = onNavigateGoals)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(goal?.goal?.name ?: "Savings goals", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                            goal?.let { Text("${it.summary.progressPercentage.stripTrailingZeros().toPlainString()}%", color = FeatureWarm,
+                                style = MaterialTheme.typography.labelMedium) }
+                        }
+                        when {
+                            goalLoading -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                            goalError != null -> Text("Goal preview unavailable. Open Goals to retry.", style = MaterialTheme.typography.bodySmall)
+                            goal == null -> Text("Create your next milestone and track your contributions.", style = MaterialTheme.typography.bodySmall)
+                            else -> {
+                                LinearProgressIndicator(progress = { goal.summary.progressPercentage.toFloat() / 100f },
+                                    modifier = Modifier.fillMaxWidth(), trackColor = Color(0xFF222222))
+                                Text("${goalMoney(goal.summary.currentSavingsMinor)} of ${goalMoney(goal.goal.targetAmountMinor)}",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(if (goal.summary.isComplete) "Goal completed" else
+                                    "Save ${goalMoney(goal.summary.requiredMonthlySavingsMinor)}/mo", style = MaterialTheme.typography.bodySmall)
                             }
+                        }
+                        Text("View your goals →", color = FeatureWarm, style = MaterialTheme.typography.labelLarge)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        FeaturePanel(Modifier.weight(1f)) {
+                            Text("Spending this month", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            FeatureAmount(if (state.summaryError || state.isLoading) "—" else state.expenses)
+                        }
+                        FeaturePanel(Modifier.weight(1f).clickable(onClick = onNavigateInvoices)) {
+                            Text("Overdue invoices", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (invoices.loading || invoices.error != null) "—" else
+                                invoices.invoices.count { it.statusOn(invoices.today) == InvoiceStatus.OVERDUE }.toString(),
+                                style = MaterialTheme.typography.titleLarge)
+                            Text(invoiceTotal(invoices, InvoiceStatus.OVERDUE), style = MaterialTheme.typography.bodySmall, color = Color(0xFFFF8A6B))
                         }
                     }
-
-                    // Savings Goal Progress Card
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(Color(0xFF101010))
-                            .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(24.dp))
-                            .clickable { onNavigateGoals() }
-                            .padding(16.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(state.goalName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                Text(state.goalPercentage, color = Color(0xFFF47422), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                            // Progress bar
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(99.dp))
-                                    .background(Color(0xFF222222))
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(0.523f)
-                                        .clip(RoundedCornerShape(99.dp))
-                                        .background(
-                                            Brush.horizontalGradient(
-                                                colors = listOf(Color(0xFFE3380D), Color(0xFFF47422))
-                                            )
-                                        )
-                                )
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(state.goalProgressText, color = Color(0xFF7A7A7A), fontSize = 12.sp)
-                                Text("Save ${state.goalMonthlySave}", color = Color(0xFF7A7A7A), fontSize = 12.sp)
-                            }
-                        }
-                    }
-
-                    // Grid: Committed Spend & Overdue Invoices
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(Color(0xFF101010))
-                                .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(22.dp))
-                                .padding(14.dp)
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Committed spend", color = Color(0xFF7A7A7A), fontSize = 12.sp)
-                                Text(state.committedSpend, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(99.dp))
-                                        .background(Color(0xFFE3380D))
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .fillMaxWidth(0.55f)
-                                            .background(Color(0xFFF47422))
-                                    )
-                                }
-                            }
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(Color(0xFF101010))
-                                .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(22.dp))
-                                .clickable { onNavigateInvoices() }
-                                .padding(14.dp)
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Overdue invoices", color = Color(0xFF7A7A7A), fontSize = 12.sp)
-                                Text(state.overdueInvoicesCount, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                                Text(state.overdueInvoicesAmount, color = Color(0xFFFF8A6B), fontSize = 12.sp)
-                            }
-                        }
-                    }
-
-                    // Recent Activity Card
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(26.dp))
-                            .background(Color(0xFF101010))
-                            .padding(14.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Recent activity", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                                Text("View all", color = Color(0xFF7A7A7A), fontSize = 13.sp)
-                            }
-
-                            if (state.recentActivity.isEmpty()) {
-                                Text(
-                                    text = "No activity for this month",
-                                    color = Color(0xFF7A7A7A),
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.padding(vertical = 12.dp)
-                                )
-                            } else {
-                                state.recentActivity.forEach { item ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(18.dp))
-                                            .background(Color(0xFF0A0A0A))
-                                            .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(18.dp))
-                                            .padding(10.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(42.dp)
-                                                .clip(RoundedCornerShape(14.dp))
-                                                .background(Color(0xFF1A1A1A)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(item.tag, color = Color(0xFFF47422), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                                            Text(item.meta, color = Color(0xFF7A7A7A), fontSize = 11.sp)
-                                        }
-                                        Column(horizontalAlignment = Alignment.End) {
-                                            Text(
-                                                text = item.amount,
-                                                color = if (item.isIncome) Color(0xFF6EE7A0) else Color.White,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                            Text(
-                                                text = if (item.isIncome) "Income" else "Expense",
-                                                color = if (item.isIncome) Color(0xFF6EE7A0) else Color(0xFFFF7A5C),
-                                                fontSize = 11.sp
-                                            )
-                                        }
-                                    }
+                    FeaturePanel {
+                        Text("Recent activity", style = MaterialTheme.typography.titleMedium)
+                        when {
+                            state.isLoading -> Text("Loading activity…", style = MaterialTheme.typography.bodySmall)
+                            state.summaryError -> Text("Activity is unavailable. Retry the overview above.", style = MaterialTheme.typography.bodySmall)
+                            state.recentActivity.isEmpty() -> Text("No activity for this month. Your saved income and expenses will appear here.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            else -> state.recentActivity.forEach { activity ->
+                                Column(Modifier.fillMaxWidth().background(Color(0xFF0A0A0A), RoundedCornerShape(18.dp)).padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(activity.title, style = MaterialTheme.typography.titleSmall)
+                                    Text(activity.meta + " · " + activity.date, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    FeatureAmount(activity.amount, color = if (activity.isIncome) Color(0xFF6EE7A0) else Color.White)
                                 }
                             }
                         }
@@ -493,5 +175,22 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HeroMetric(label: String, value: String, modifier: Modifier) {
+    Surface(modifier, color = Color.Black.copy(alpha = .24f), shape = RoundedCornerShape(18.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(label, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .85f))
+            FeatureAmount(value, color = Color.White)
+        }
+    }
+}
+
+private fun invoiceTotal(state: InvoiceListState, status: InvoiceStatus): String {
+    if (state.loading || state.error != null) return "—"
+    return InvoiceRules.totals(state.invoices, status, state.today).entries.joinToString(" · ") { (currency, amount) ->
+        "${currency.code} ${java.text.DecimalFormat("#,##0.##", java.text.DecimalFormatSymbols(java.util.Locale.US)).format(BigDecimal(amount).movePointLeft(2))}"
     }
 }

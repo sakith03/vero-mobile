@@ -16,7 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +33,8 @@ import com.example.veromobile.ui.invoice.InvoiceDateField
 import com.example.veromobile.ui.invoice.InvoiceField
 import com.example.veromobile.ui.invoice.InvoiceHeader
 import com.example.veromobile.ui.invoice.InvoiceTheme
+import com.example.veromobile.ui.components.FeatureAmount
+import com.example.veromobile.ui.components.FeatureState
 import kotlinx.serialization.Serializable
 import java.math.BigInteger
 import java.text.DecimalFormat
@@ -66,22 +67,26 @@ internal fun RecurringScreen(state: RecurringUiState, model: RecurringViewModel,
             surfaceTint = Accent, onSurfaceVariant = Muted)) {
             BackHandler(state.form != null) { if (!state.busy) model.closeForm() }
             Scaffold(containerColor = Color.Black) { padding ->
-                Column(Modifier.padding(padding).fillMaxSize().imePadding().padding(horizontal = 18.dp)) {
+                Column(Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize().imePadding().padding(horizontal = 18.dp)) {
                     InvoiceHeader(if (state.form != null) {
                         if (state.form.original == null) "Add recurring" else "Edit recurring"
                     } else if (state.subscriptionsOnly) "Subscriptions" else "Recurring",
                         onBack = { if (!state.busy) { if (state.form != null) model.closeForm() else if (state.subscriptionsOnly) model.showSubscriptions(false) else onBack() } })
                     if (state.busy || state.loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Accent)
                     if (state.form != null) RuleForm(state, model)
-                    else Overview(state, model)
+                    else if (state.loading && state.data.rules.isEmpty()) {
+                        FeatureState("Loading recurring payments", "Your saved schedules will appear here.")
+                    } else if (state.error != null && state.data.rules.isEmpty()) {
+                        FeatureState("Recurring payments unavailable", state.error, "Retry", model::retry)
+                    } else Overview(state, model)
                 }
             }
             if (state.payment != null) PaymentDialog(state, model)
             state.cancelling?.let { rule ->
                 AlertDialog(onDismissRequest = { model.askCancel(null) }, title = { Text("Cancel ${rule.name}?") },
                     text = { Text("Future payments will stop and unconfirmed occurrences will be cancelled. Recorded Expenses and history will stay.") },
-                    confirmButton = { TextButton(model::cancel, enabled = !state.busy) { Text("Cancel rule") } },
-                    dismissButton = { TextButton({ model.askCancel(null) }, enabled = !state.busy) { Text("Keep active") } })
+                    confirmButton = { Button(model::cancel, enabled = !state.busy, modifier = Modifier.heightIn(min = 48.dp)) { Text(if (state.busy) "Cancelling…" else "Cancel rule") } },
+                    dismissButton = { TextButton({ model.askCancel(null) }, enabled = !state.busy, modifier = Modifier.heightIn(min = 48.dp)) { Text("Keep active") } })
             }
         }
     }
@@ -102,13 +107,13 @@ private fun Overview(state: RecurringUiState, model: RecurringViewModel) {
     val history = state.data.occurrences.filter { it.status != "PENDING" }
     LazyColumn(Modifier.testTag("recurring-list"), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
-            Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF411309), Color(0xFF17100D))), RoundedCornerShape(24.dp))
+            Column(Modifier.fillMaxWidth().background(Color(0xFF101010), RoundedCornerShape(24.dp))
                 .padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Outlined.Repeat, null, tint = Color(0xFFFFA07E))
-                    Text("A little more predictable", style = MaterialTheme.typography.titleMedium)
+                    Text("Your scheduled payments", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                 }
-                Text("${pending.size} to confirm · ${subscriptions.size} active subscriptions", color = Color(0xFFE0C6BD), style = MaterialTheme.typography.bodySmall)
+                Text("${pending.size} to confirm · ${subscriptions.size} active subscriptions", color = Muted, style = MaterialTheme.typography.bodySmall)
                 Text("Expected amounts stay separate. You decide when a payment becomes an Expense.", color = Muted, style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -117,7 +122,7 @@ private fun Overview(state: RecurringUiState, model: RecurringViewModel) {
                 Icon(Icons.Outlined.Add, null); Spacer(Modifier.width(8.dp)); Text("Add recurring")
             }
         }
-        item { Text("On this device · cloud sync pending", color = Muted, style = MaterialTheme.typography.bodySmall); Feedback(state, model::retry) }
+        item { Feedback(state, model::retry) }
         if (!state.subscriptionsOnly) {
             item { SectionTitle("To confirm", "${pending.size} due") }
             if (pending.isEmpty()) item { EmptyCard("All caught up", "Due bills will appear here. Nothing is recorded as an Expense until you confirm.") }
@@ -126,7 +131,7 @@ private fun Overview(state: RecurringUiState, model: RecurringViewModel) {
                     Text(row.name, style = MaterialTheme.typography.titleSmall)
                     Text("${if (row.scheduledDate < state.today) "Overdue" else "Due today"} · ${row.scheduledDate}", color = Color(0xFFFFB49C), style = MaterialTheme.typography.bodySmall)
                     Text("${category(row.categoryId)} · ${row.channel.label}", color = Muted, style = MaterialTheme.typography.bodySmall)
-                    Text("Expected ${money(row.expectedMinor)}", fontWeight = FontWeight.SemiBold)
+                    FeatureAmount("Expected ${money(row.expectedMinor)}", maxFontSize = 16.sp)
                     Button({ model.openPayment(row) }, Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = !state.busy) { Text("Confirm payment") }
                 }
             }
@@ -141,8 +146,7 @@ private fun Overview(state: RecurringUiState, model: RecurringViewModel) {
         item { SectionTitle("Active subscriptions", "Monthly total") }
         item {
             Panel {
-                Text(monthlyMoney(RecurrenceCalculator.monthlyTotal(state.data.rules)),
-                    fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+                FeatureAmount(monthlyMoney(RecurrenceCalculator.monthlyTotal(state.data.rules)), maxFontSize = 28.sp)
                 Text("per month · active monthly subscriptions only", color = Muted, style = MaterialTheme.typography.bodySmall)
                 if (!state.subscriptionsOnly) TextButton({ model.showSubscriptions(true) }, Modifier.heightIn(min = 48.dp)) { Text("Manage subscriptions") }
             }
@@ -175,7 +179,7 @@ private fun Overview(state: RecurringUiState, model: RecurringViewModel) {
 private fun RuleCard(rule: RecurringRule, busy: Boolean, model: RecurringViewModel) {
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(44.dp).background(Color(0xFF25201D), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).background(Color(0xFF1E1E1E), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
                 Text(rule.name.take(2).uppercase(), color = Color(0xFFFFB49C), fontWeight = FontWeight.SemiBold)
             }
             Column(Modifier.weight(1f)) { Text(rule.name, style = MaterialTheme.typography.titleSmall)
@@ -191,7 +195,7 @@ private fun RuleCard(rule: RecurringRule, busy: Boolean, model: RecurringViewMod
 @Composable
 private fun Panel(content: @Composable ColumnScope.() -> Unit) {
     Surface(shape = RoundedCornerShape(22.dp), color = Color(0xFF0E0E0E), contentColor = Color.White,
-        border = BorderStroke(1.dp, Color(0xFF252525))) {
+        border = BorderStroke(1.dp, Color(0xFF1E1E1E))) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
 }
@@ -241,7 +245,7 @@ private fun ColumnScope.RuleForm(state: RecurringUiState, model: RecurringViewMo
         Feedback(state, model::save)
         Spacer(Modifier.height(8.dp))
     }
-    Button(model::save, Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = !state.busy) { Text("Save recurring rule") }
+    Button(model::save, Modifier.fillMaxWidth().heightIn(min = 56.dp), enabled = !state.busy, shape = androidx.compose.foundation.shape.CircleShape) { Text(if (state.busy) "Saving…" else "Save recurring rule") }
     TextButton(model::closeForm, Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = !state.busy) { Text("Cancel") }
 }
 
@@ -257,6 +261,6 @@ private fun PaymentDialog(state: RecurringUiState, model: RecurringViewModel) {
             Text("Confirm records one Expense. Expected amounts stay in your recurring history.", color = Muted, style = MaterialTheme.typography.bodySmall)
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-    }, confirmButton = { Button(model::confirm, Modifier.heightIn(min = 48.dp), enabled = !state.busy) { Text("Confirm") } },
+    }, confirmButton = { Button(model::confirm, Modifier.heightIn(min = 48.dp), enabled = !state.busy) { Text(if (state.busy) "Recording…" else "Confirm") } },
         dismissButton = { TextButton(model::closePayment, Modifier.heightIn(min = 48.dp), enabled = !state.busy) { Text("Back") } })
 }

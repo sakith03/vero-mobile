@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -19,12 +20,14 @@ import androidx.compose.ui.unit.dp
 fun FreelanceInvoiceCard(
     onOpenInvoices: () -> Unit,
     onNewInvoice: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Surface(
         modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Paid for an invoice?", style = MaterialTheme.typography.titleSmall)
@@ -34,11 +37,11 @@ fun FreelanceInvoiceCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onOpenInvoices, modifier = Modifier.weight(1f)) {
-                    Text("Open invoices")
+                OutlinedButton(onClick = onOpenInvoices, modifier = Modifier.weight(1f).heightIn(min = 48.dp), enabled = enabled) {
+                    Text("Open invoices", style = MaterialTheme.typography.labelMedium)
                 }
-                Button(onClick = onNewInvoice, modifier = Modifier.weight(1f)) {
-                    Text("New invoice")
+                Button(onClick = onNewInvoice, modifier = Modifier.weight(1f).heightIn(min = 48.dp), enabled = enabled) {
+                    Text("New invoice", style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
