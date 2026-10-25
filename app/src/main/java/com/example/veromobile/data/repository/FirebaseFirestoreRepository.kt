@@ -13,6 +13,7 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -63,6 +64,10 @@ class FirebaseFirestoreRepository @Inject constructor(
         collection: FirestoreCollection<T>
     ): Flow<FirestoreResult<List<T>>> = observe(collection) { it }
 
+    override fun <T : UserFirestoreDocument> observeAllIncludingDeleted(
+        collection: FirestoreCollection<T>
+    ): Flow<FirestoreResult<List<T>>> = observe(collection, includeDeleted = true) { it }
+
     override fun <T : UserFirestoreDocument> observeMonthly(
         collection: FirestoreCollection<T>,
         startEpochDay: Long,
@@ -98,6 +103,7 @@ class FirebaseFirestoreRepository @Inject constructor(
 
     private fun <T : UserFirestoreDocument> observe(
         collection: FirestoreCollection<T>,
+        includeDeleted: Boolean = false,
         query: (CollectionReference) -> Query
     ): Flow<FirestoreResult<List<T>>> = callbackFlow {
         val userId = try {
@@ -122,7 +128,7 @@ class FirebaseFirestoreRepository @Inject constructor(
                     item.toObject(collection.documentType)?.also {
                         validateDocument(userId, item.id, it)
                     } ?: throw InvalidRecordException()
-                }.filterNot(UserFirestoreDocument::isDeleted)
+                }.filter { includeDeleted || !it.isDeleted }
                 FirestoreResult.Success(records)
             } catch (_: Exception) {
                 FirestoreResult.Failure(FirestoreError.INVALID_RECORD)
@@ -153,6 +159,8 @@ class FirebaseFirestoreRepository @Inject constructor(
 
     private suspend fun <T> cloudCall(block: suspend () -> T): FirestoreResult<T> = try {
         FirestoreResult.Success(block())
+    } catch (cancelled: CancellationException) {
+        throw cancelled
     } catch (error: Exception) {
         FirestoreResult.Failure(error.toFirestoreError())
     }

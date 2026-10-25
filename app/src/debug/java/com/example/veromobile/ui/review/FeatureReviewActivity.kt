@@ -45,8 +45,8 @@ class FeatureReviewActivity : ComponentActivity() {
     private val goalsRepository by lazy { SavingsGoalRepositoryImpl(database.goalDao(), cloud, owner, clock) }
     private val invoiceRepository by lazy { InvoiceRepository(database.invoiceDao(), cloud, owner, clock) }
     private val recurringRepository by lazy { RecurringRepository(database, cloud, owner, clock) }
-    private val incomeRepository by lazy { IncomeRepositoryImpl(database.incomeDao(), cloud, owner) }
-    private val expenseRepository by lazy { ExpenseRepositoryImpl(database.expenseDao(), cloud, owner) }
+    private val incomeRepository by lazy { IncomeRepositoryImpl(database.incomeDao(), owner) }
+    private val expenseRepository by lazy { ExpenseRepositoryImpl(database.expenseDao(), owner) }
 
     private fun <T : ViewModel> model(key: String, type: Class<T>, build: () -> T): T =
         ViewModelProvider(this, object : ViewModelProvider.Factory {

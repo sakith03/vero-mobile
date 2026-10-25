@@ -44,6 +44,11 @@ interface FirestoreRepository {
         collection: FirestoreCollection<T>
     ): Flow<FirestoreResult<List<T>>>
 
+    /** Includes tombstones so the local cache can reflect remote soft deletions. */
+    fun <T : UserFirestoreDocument> observeAllIncludingDeleted(
+        collection: FirestoreCollection<T>
+    ): Flow<FirestoreResult<List<T>>> = observeAll(collection)
+
     /** [endEpochDayExclusive] makes adjacent monthly ranges unambiguous. */
     fun <T : UserFirestoreDocument> observeMonthly(
         collection: FirestoreCollection<T>,
