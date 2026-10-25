@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 data class RecentActivityItem(
     val id: String,
@@ -38,7 +39,7 @@ data class RecentActivityItem(
 )
 
 data class DashboardUiState(
-    val userName: String = "Kavindu Silva",
+    val userName: String = "Your account",
     val monthLabel: String = "October 2026",
     val surplus: String = "LKR 0",
     val receivedIncome: String = "LKR 0",
@@ -46,7 +47,10 @@ data class DashboardUiState(
     val expectedNotReceived: String = "LKR 0",
     val cryptoPl: String = "LKR 0",
     val showSalaryBanner: Boolean = true,
-    val salaryInput: String = "135,000",
+    val salaryInput: String = "",
+    val salarySaving: Boolean = false,
+    val salaryError: String? = null,
+    val summaryError: Boolean = false,
     val goalName: String = "Savings Goal",
     val goalProgressText: String = "LKR 0 of LKR 0",
     val goalPercentage: String = "0%",
@@ -70,6 +74,7 @@ class DashboardViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private var observation: Job? = null
 
     init {
         observeData()
@@ -86,13 +91,21 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun onSalaryInputChanged(value: String) {
-        _uiState.update { it.copy(salaryInput = value) }
+        _uiState.update { it.copy(salaryInput = value, salaryError = null) }
     }
 
     fun confirmSalary() {
         val s = _uiState.value
-        val amountMinor = AmountInput.toMinorUnits(s.salaryInput)
-        if (amountMinor <= 0) return
+        if (s.salarySaving) return
+        val amountMinor = try { AmountInput.toMinorUnits(s.salaryInput) } catch (_: NumberFormatException) {
+            _uiState.update { it.copy(salaryError = "Enter digits and a decimal point; commas are not supported by the current salary parser.") }
+            return
+        }
+        if (amountMinor <= 0) {
+            _uiState.update { it.copy(salaryError = "Enter an amount greater than zero") }
+            return
+        }
+        _uiState.update { it.copy(salarySaving = true, salaryError = null) }
         viewModelScope.launch {
             val income = Income(
                 source = IncomeSource.SALARY,
@@ -106,13 +119,18 @@ class DashboardViewModel @Inject constructor(
             )
             val result = incomeRepository.addIncome(income)
             if (result.isSuccess) {
-                _uiState.update { it.copy(showSalaryBanner = false) }
+                _uiState.update { it.copy(showSalaryBanner = false, salarySaving = false) }
+            } else {
+                _uiState.update { it.copy(salarySaving = false, salaryError = "Couldn't save salary. Your amount is kept; please try again.") }
             }
         }
     }
 
+    fun retry() = observeData()
+
     private fun observeData() {
-        viewModelScope.launch {
+        observation?.cancel()
+        observation = viewModelScope.launch {
             val ym = _yearMonth.value
             val startEpochDay = ym.atDay(1).toEpochDay()
             val endEpochDayExclusive = ym.atEndOfMonth().plusDays(1).toEpochDay()
@@ -175,6 +193,9 @@ class DashboardViewModel @Inject constructor(
                     cryptoPl = "LKR 0",
                     showSalaryBanner = _uiState.value.showSalaryBanner,
                     salaryInput = _uiState.value.salaryInput,
+                    salarySaving = _uiState.value.salarySaving,
+                    salaryError = _uiState.value.salaryError,
+                    summaryError = incResult is FirestoreResult.Failure || expResult is FirestoreResult.Failure,
                     goalName = goal?.name ?: "Savings Goal",
                     goalProgressText = "${goalMoney(goalCurrent)} of ${goalMoney(goalTarget)}",
                     goalPercentage = String.format(Locale.US, "%.1f%%", goalPct),
