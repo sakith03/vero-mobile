@@ -1,50 +1,53 @@
 package com.example.veromobile.ui.auth
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.veromobile.ui.components.FeaturePanel
+import com.example.veromobile.ui.components.FeatureScreen
+import com.example.veromobile.ui.invoice.InvoiceHeader
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(email: String?, onBack: () -> Unit, onSignOut: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Account") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
+    var confirmingSignOut by rememberSaveable { mutableStateOf(false) }
+    FeatureScreen {
+        Scaffold { padding ->
+            Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)
+                .verticalScroll(rememberScrollState()).padding(horizontal = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                InvoiceHeader("Account", onBack)
+                FeaturePanel {
+                    Icon(Icons.Outlined.AccountCircle, contentDescription = null,
+                        modifier = Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text("Signed in as", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(email ?: "Firebase account", style = MaterialTheme.typography.titleMedium)
                 }
-            )
-        }
-    ) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Text("Signed in as", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(email ?: "Firebase account", style = MaterialTheme.typography.titleMedium)
-            Button(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
-                Text("Sign out", Modifier.padding(start = 8.dp))
+                Spacer(Modifier.height(8.dp))
+                Button({ confirmingSignOut = true }, Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = CircleShape) {
+                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Sign out")
+                }
+                Spacer(Modifier.height(24.dp))
             }
         }
+        if (confirmingSignOut) AlertDialog(onDismissRequest = { confirmingSignOut = false },
+            title = { Text("Sign out?") },
+            text = { Text("You will need to sign in again to access your account.") },
+            confirmButton = {
+                Button({ confirmingSignOut = false; onSignOut() }, Modifier.heightIn(min = 48.dp)) { Text("Sign out") }
+            }, dismissButton = {
+                TextButton({ confirmingSignOut = false }, Modifier.heightIn(min = 48.dp)) { Text("Cancel") }
+            })
     }
 }

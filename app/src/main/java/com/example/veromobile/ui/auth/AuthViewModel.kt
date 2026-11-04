@@ -2,6 +2,7 @@ package com.example.veromobile.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.veromobile.data.connectivity.ConnectivityObserver
 import com.example.veromobile.domain.repository.AuthError
 import com.example.veromobile.domain.repository.AuthRepository
 import com.example.veromobile.domain.repository.AuthResult
@@ -27,12 +28,14 @@ data class AuthUiState(
     val passwordError: String? = null,
     val confirmPasswordError: String? = null,
     val message: String? = null,
-    val isSubmitting: Boolean = false
+    val isSubmitting: Boolean = false,
+    val isOffline: Boolean = false
 )
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val repository: AuthRepository
+    private val repository: AuthRepository,
+    private val connectivity: ConnectivityObserver
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -40,6 +43,11 @@ class AuthViewModel @Inject constructor(
     private var observedUser: AuthUser? = null
 
     init {
+        viewModelScope.launch {
+            connectivity.isOnline.collect { online ->
+                _uiState.update { it.copy(isOffline = !online) }
+            }
+        }
         viewModelScope.launch {
             repository.authState.collect { user ->
                 observedUser = user
@@ -126,7 +134,7 @@ class AuthViewModel @Inject constructor(
     fun signOut() {
         repository.signOut()
         observedUser = null
-        _uiState.value = AuthUiState(isResolvingSession = false)
+        _uiState.value = AuthUiState(isResolvingSession = false, isOffline = !connectivity.isOnline.value)
     }
 
     private fun show(screen: AuthScreen) {

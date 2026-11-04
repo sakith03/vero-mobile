@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.veromobile.core.AppTime
 import com.example.veromobile.data.repository.InvoiceRepository
+import com.example.veromobile.data.repository.LocalOnlyFirestoreRepository
 import com.example.veromobile.domain.model.*
 import com.example.veromobile.domain.session.UserSession
 import java.time.*
@@ -31,7 +32,8 @@ class InvoicePersistenceTest {
 
     @Before fun setUp() { db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build() }
     @After fun cleanUp() { db.close(); files.forEach { context.deleteDatabase(it) } }
-    private fun repository(owner: String = "alice") = InvoiceRepository(db.invoiceDao(), object : UserSession { override val userId = owner }, clock)
+    private fun repository(owner: String = "alice") = InvoiceRepository(db.invoiceDao(), LocalOnlyFirestoreRepository,
+        object : UserSession { override val userId = owner }, clock)
     private fun open(name: String) = Room.databaseBuilder(context, AppDatabase::class.java, name)
         .addMigrations(GoalMigrations.MIGRATION_1_2, GoalMigrations.MIGRATION_2_3, InvoiceMigrations.MIGRATION_3_4, RecurringMigrations.MIGRATION_4_5).build()
     private fun newName() = "invoice-test-${UUID.randomUUID()}.db".also { files.add(it) }

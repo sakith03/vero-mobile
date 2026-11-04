@@ -31,7 +31,7 @@ class SavingsGoalsViewModel @Inject constructor(
     @param:GoalsClock private val clock: Clock
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SavingsGoalsUiState(
-        page = GoalPage.valueOf(savedState["goal.page"] ?: GoalPage.DETAILS.name),
+        page = GoalPage.entries.firstOrNull { it.name == savedState.get<String>("goal.page") } ?: GoalPage.LANDING,
         form = GoalFormState(
             name = savedState["goal.name"] ?: "",
             target = savedState["goal.target"] ?: "",
@@ -65,7 +65,7 @@ class SavingsGoalsViewModel @Inject constructor(
     fun refreshDate() {
         if (today() != observedDate) {
             observedDate = today()
-            savedState.get<String>("goal.selected")?.let(::selectGoal)
+            if (_uiState.value.page != GoalPage.LANDING) savedState.get<String>("goal.selected")?.let(::observeDetails)
         }
     }
 
@@ -80,15 +80,18 @@ class SavingsGoalsViewModel @Inject constructor(
                     is GoalResult.Failure -> _uiState.update { it.copy(isLoading = false, error = errorMessage(result.error)) }
                     is GoalResult.Success -> {
                         val goals = result.value
-                        _uiState.update { it.copy(goals = goals, error = null) }
+                        _uiState.update { it.copy(goals = goals, error = null, isLoading = false) }
                         if (goals.isEmpty()) {
                             detailsJob?.cancel()
                             detailsJob = null
                             _uiState.update { it.copy(isLoading = false, details = null) }
                         } else {
                             val selectedId = savedState.get<String>("goal.selected")
-                            val selectedGoal = goals.firstOrNull { it.id == selectedId } ?: goals.first()
-                            if (detailsJob == null || selectedGoal.id != selectedId) selectGoal(selectedGoal.id)
+                            if (goals.none { it.id == selectedId }) {
+                                createGoal()
+                            } else if (detailsJob == null && _uiState.value.page != GoalPage.LANDING) {
+                                observeDetails(checkNotNull(selectedId))
+                            }
                         }
                     }
                 }
@@ -97,7 +100,13 @@ class SavingsGoalsViewModel @Inject constructor(
     }
 
     fun selectGoal(id: String) {
+        if (_uiState.value.form.isSaving) return
         if (_uiState.value.contribution.isOpen && id != savedState.get<String>("contribution.goalId")) return
+        setPage(GoalPage.DETAILS)
+        observeDetails(id)
+    }
+
+    private fun observeDetails(id: String) {
         savedState["goal.selected"] = id
         detailsJob?.cancel()
         _uiState.update { it.copy(isLoading = true, details = null, error = null) }
@@ -112,14 +121,26 @@ class SavingsGoalsViewModel @Inject constructor(
     }
 
     fun createGoal() {
-        savedState["goal.draftId"] = UUID.randomUUID().toString()
-        savedState["goal.createdAt"] = clock.millis()
-        setForm(GoalFormState(date = today().plusMonths(12).toString()))
-        setPage(GoalPage.CREATE)
+        if (_uiState.value.form.isSaving || _uiState.value.contribution.isSaving) return
+        if (_uiState.value.page == GoalPage.EDIT) {
+            restoreCreateDraft()
+        }
+        closeContribution()
+        detailsJob?.cancel()
+        detailsJob = null
+        savedState.remove<String>("goal.selected")
+        setPage(GoalPage.LANDING)
+        _uiState.update { it.copy(details = null, isLoading = false, error = null) }
     }
 
     fun editGoal() {
         val goal = _uiState.value.details?.goal ?: return
+        // The create draft is independent of the selected goal's edit form.
+        val draft = _uiState.value.form
+        savedState["create.name"] = draft.name
+        savedState["create.target"] = draft.target
+        savedState["create.date"] = draft.date
+        savedState["create.opening"] = draft.opening
         savedState["goal.draftId"] = goal.id
         savedState["goal.createdAt"] = goal.createdAt
         setForm(GoalFormState(
@@ -132,7 +153,20 @@ class SavingsGoalsViewModel @Inject constructor(
     }
 
     fun cancelForm() {
-        if (!_uiState.value.form.isSaving) setPage(GoalPage.DETAILS)
+        if (!_uiState.value.form.isSaving) {
+            restoreCreateDraft()
+            setPage(GoalPage.DETAILS)
+        }
+    }
+
+    private fun restoreCreateDraft() {
+        // Reuse the landing restoration without losing the selected detail subscription.
+        setForm(GoalFormState(
+            name = savedState["create.name"] ?: "",
+            target = savedState["create.target"] ?: "",
+            date = savedState["create.date"] ?: today().plusMonths(12).toString(),
+            opening = savedState["create.opening"] ?: "0"
+        ))
     }
 
     fun changeGoalField(field: GoalField, value: String) {
@@ -159,10 +193,15 @@ class SavingsGoalsViewModel @Inject constructor(
         if (target == null) errors[GoalField.TARGET_AMOUNT] = "Enter a valid amount with up to 2 decimal places"
         if (opening == null) errors[GoalField.OPENING_AMOUNT] = "Enter a valid opening amount"
         if (date == null) errors[GoalField.TARGET_DATE] = "Enter a valid date (YYYY-MM-DD)"
-        val id = savedState.get<String>("goal.draftId") ?: return
+        val idKey = if (state.page == GoalPage.EDIT) "goal.draftId" else "create.id"
+        val createdKey = if (state.page == GoalPage.EDIT) "goal.createdAt" else "create.createdAt"
+        val id = savedState.get<String>(idKey) ?: UUID.randomUUID().toString().also {
+            savedState[idKey] = it
+            savedState[createdKey] = clock.millis()
+        }
         val goal = SavingsGoal(id = id, name = form.name.trim(), targetAmountMinor = target ?: 0,
             targetDate = date ?: today(), openingAmountMinor = opening ?: 0,
-            createdAt = savedState["goal.createdAt"] ?: clock.millis(), updatedAt = clock.millis())
+            createdAt = savedState[createdKey] ?: clock.millis(), updatedAt = clock.millis())
         GoalValidator.validateGoal(goal).errors.forEach { (field, message) -> errors.putIfAbsent(field, message) }
         if (errors.isNotEmpty()) {
             setForm(form.copy(errors = errors))
@@ -173,9 +212,14 @@ class SavingsGoalsViewModel @Inject constructor(
             val result = if (state.page == GoalPage.EDIT) repository.editGoal(goal) else repository.createGoal(goal)
             when (result) {
                 is GoalResult.Success -> {
-                    setForm(_uiState.value.form.copy(isSaving = false))
-                    setPage(GoalPage.DETAILS)
-                    selectGoal(goal.id)
+                    if (state.page == GoalPage.EDIT) {
+                        restoreCreateDraft()
+                        selectGoal(goal.id)
+                    } else {
+                        savedState.remove<String>("create.id")
+                        savedState.remove<Long>("create.createdAt")
+                        setForm(GoalFormState(date = today().plusMonths(12).toString()))
+                    }
                     _uiState.update { it.copy(message = if (state.page == GoalPage.EDIT) "Goal updated" else "Goal created") }
                 }
                 is GoalResult.Failure -> setForm(_uiState.value.form.copy(isSaving = false,

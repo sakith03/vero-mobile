@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.veromobile.domain.model.GoalDetails
 import com.example.veromobile.domain.model.SavingsGoal
+import com.example.veromobile.ui.components.FeatureAmount
+import androidx.compose.ui.text.style.TextAlign
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
@@ -53,7 +55,7 @@ fun GoalDetailsScreen(details: GoalDetails, goals: List<SavingsGoal>, today: Loc
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             GoalProgressRing(summary.progressPercentage, goal.targetAmountMinor)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(goal.name, style = MaterialTheme.typography.titleLarge)
+                Text(goal.name, Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
                 val timing = when {
                     summary.isComplete -> "Goal complete"
                     goal.targetDate < today -> "Target date passed"
@@ -62,7 +64,8 @@ fun GoalDetailsScreen(details: GoalDetails, goals: List<SavingsGoal>, today: Loc
                     else -> "${summary.remainingWholeMonths} months left"
                 }
                 Text("Target ${goal.targetDate.format(DateTimeFormatter.ofPattern("MMM yyyy", Locale.US))} · $timing",
-                    fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    fontSize = 13.sp, color = if (summary.isComplete) Color(0xFF6EE7A0) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -78,7 +81,7 @@ fun GoalDetailsScreen(details: GoalDetails, goals: List<SavingsGoal>, today: Loc
                         color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f).padding(start = 8.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.End)
                 }
-                Text(goalMoney(summary.thisMonthContributionsMinor), style = MaterialTheme.typography.headlineMedium)
+                FeatureAmount(goalMoney(summary.thisMonthContributionsMinor), maxFontSize = 26.sp)
                 GoalMonthlyBar(summary.thisMonthProgressPercentage)
                 Text(when {
                     summary.isComplete -> "Your goal is complete. Every contribution made a difference."
@@ -102,24 +105,25 @@ fun GoalDetailsScreen(details: GoalDetails, goals: List<SavingsGoal>, today: Loc
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Contribution history", style = MaterialTheme.typography.titleMedium)
             details.contributions.forEach { contribution ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(Modifier.weight(1f)) {
+                Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column {
                         Text("Contribution · ${contribution.date.format(DateTimeFormatter.ofPattern("MMM d", Locale.US))}",
                             fontSize = 13.sp, color = Color(0xFFBDBDBD))
                         contribution.note?.takeIf { it.isNotBlank() }?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    Text("+${goalMoney(contribution.amountMinor)}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    FeatureAmount("+${goalMoney(contribution.amountMinor)}", maxFontSize = 13.sp)
                 }
                 HorizontalDivider(color = GoalBorder)
             }
             if (details.contributions.isEmpty()) Text("Your first contribution will appear here.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Opening amount", fontSize = 13.sp, color = Color(0xFFBDBDBD))
-                Text(goalMoney(goal.openingAmountMinor), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                FeatureAmount(goalMoney(goal.openingAmountMinor), maxFontSize = 13.sp)
             }
         }
         GoalPrimaryButton("Add custom contribution", { onContribute(null) })
@@ -133,7 +137,7 @@ private fun GoalAmountCard(label: String, amount: Long, modifier: Modifier) {
     Surface(modifier = modifier.heightIn(min = 76.dp), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, GoalBorder)) {
         Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(goalMoney(amount), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            FeatureAmount(goalMoney(amount), maxFontSize = 17.sp)
         }
     }
 }
@@ -151,7 +155,8 @@ private fun GoalProgressRing(percentage: BigDecimal, target: Long) {
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text("${percentage.setScale(1, RoundingMode.HALF_UP)}%", style = MaterialTheme.typography.headlineLarge)
-            Text("of ${goalMoney(target)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("of ${goalMoney(target)}", Modifier.widthIn(max = 168.dp), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
     }
 }

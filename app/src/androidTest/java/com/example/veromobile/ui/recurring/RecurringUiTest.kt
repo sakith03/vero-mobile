@@ -14,6 +14,7 @@ import com.example.veromobile.MainActivity
 import com.example.veromobile.core.AppTime
 import com.example.veromobile.data.local.AppDatabase
 import com.example.veromobile.data.repository.RecurringRepository
+import com.example.veromobile.data.repository.LocalOnlyFirestoreRepository
 import com.example.veromobile.domain.session.UserSession
 import java.time.Clock
 import java.util.UUID
@@ -34,7 +35,8 @@ class RecurringUiTest {
 
     @Before fun setup() {
         db = Room.databaseBuilder(context, AppDatabase::class.java, name).build()
-        repository = RecurringRepository(db, object : UserSession { override val userId = "recurring-ui-test" }, Clock.system(AppTime.zone))
+        repository = RecurringRepository(db, LocalOnlyFirestoreRepository,
+            object : UserSession { override val userId = "recurring-ui-test" }, Clock.system(AppTime.zone))
         compose.runOnUiThread {
             model = ViewModelProvider(store, object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")

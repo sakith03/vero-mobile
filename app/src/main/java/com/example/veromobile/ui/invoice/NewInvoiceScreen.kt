@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.veromobile.domain.model.Currency
+import com.example.veromobile.ui.components.FeatureState
 
 @Composable
 fun NewInvoiceScreen(onBack: () -> Unit, onSaved: () -> Unit, invoiceId: String? = null,
@@ -21,10 +22,14 @@ fun NewInvoiceScreen(onBack: () -> Unit, onSaved: () -> Unit, invoiceId: String?
     BackHandler(enabled = state.saving) { }
     InvoiceTheme {
         Scaffold { padding ->
-            Column(Modifier.padding(padding).fillMaxSize().imePadding().padding(horizontal = 18.dp),
+            Column(Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize().imePadding().padding(horizontal = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 InvoiceHeader(if (invoiceId == null) "New invoice" else "Edit invoice", { if (!state.saving) onBack() })
                 if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (state.openFailed) {
+                    FeatureState("Invoice unavailable", state.error.orEmpty(), "Back", onBack)
+                    return@Scaffold
+                }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     InvoiceField("Client", state.client, { viewModel.change("Client", it) }, state.errors["Client"], enabled = !state.saving)
                     InvoiceField("Project", state.project, { viewModel.change("Project", it) }, state.errors["Project"], enabled = !state.saving)
@@ -40,8 +45,8 @@ fun NewInvoiceScreen(onBack: () -> Unit, onSaved: () -> Unit, invoiceId: String?
                     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
                 Button(viewModel::save, enabled = !state.saving && !state.loading,
-                    modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(if (state.saving) "Saving…" else "Save invoice") }
-                TextButton(onBack, enabled = !state.saving, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = androidx.compose.foundation.shape.CircleShape) { Text(if (state.saving) "Saving…" else "Save invoice") }
+                TextButton(onBack, enabled = !state.saving, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Cancel") }
             }
         }
     }

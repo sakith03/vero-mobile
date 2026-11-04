@@ -21,6 +21,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 
 enum class AppNavTab {
     DASHBOARD, SPENDING, ADD, GOALS, RECURRING
@@ -50,11 +54,13 @@ fun AppBottomNavBar(
         ) {
             NavBarItem(
                 icon = Icons.Default.Home,
+                label = "Dashboard",
                 selected = currentTab == AppNavTab.DASHBOARD,
                 onClick = { onTabSelected(AppNavTab.DASHBOARD) }
             )
             NavBarItem(
                 icon = Icons.Default.PieChart,
+                label = "Spending",
                 selected = currentTab == AppNavTab.SPENDING,
                 onClick = { onTabSelected(AppNavTab.SPENDING) }
             )
@@ -68,18 +74,21 @@ fun AppBottomNavBar(
                             colors = listOf(Color(0xFFFFD9BC), Color(0xFFF47422), Color(0xFFE3380D), Color(0xFF6A1602))
                         )
                     )
-                    .clickable { onAddClick() },
+                    .semantics { contentDescription = "Add"; selected = currentTab == AppNavTab.ADD }
+                    .clickable(role = Role.Tab) { onAddClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
             }
             NavBarItem(
                 icon = Icons.Default.Savings,
+                label = "Goals",
                 selected = currentTab == AppNavTab.GOALS,
                 onClick = { onTabSelected(AppNavTab.GOALS) }
             )
             NavBarItem(
                 icon = Icons.Default.List,
+                label = "Recurring",
                 selected = currentTab == AppNavTab.RECURRING,
                 onClick = { onTabSelected(AppNavTab.RECURRING) }
             )
@@ -90,6 +99,7 @@ fun AppBottomNavBar(
 @Composable
 private fun NavBarItem(
     icon: ImageVector,
+    label: String,
     selected: Boolean,
     onClick: () -> Unit
 ) {
@@ -98,7 +108,8 @@ private fun NavBarItem(
             .size(50.dp)
             .clip(CircleShape)
             .background(if (selected) Color(0xFFE3380D) else Color(0xFF222222))
-            .clickable { onClick() },
+            .semantics { contentDescription = label; this.selected = selected }
+            .clickable(role = Role.Tab) { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(

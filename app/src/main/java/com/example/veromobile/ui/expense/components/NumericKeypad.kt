@@ -18,13 +18,14 @@ private val KEYS = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0",
 fun NumericKeypad(
     onKey: (Char) -> Unit,
     onBackspace: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         KEYS.chunked(3).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { key ->
-                    KeypadKey(key, Modifier.weight(1f)) {
+                    KeypadKey(key, Modifier.weight(1f), enabled) {
                         if (key == "⌫") onBackspace() else onKey(key.first())
                     }
                 }
@@ -34,9 +35,11 @@ fun NumericKeypad(
 }
 
 @Composable
-private fun KeypadKey(label: String, modifier: Modifier, onClick: () -> Unit) {
+private fun KeypadKey(label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
+        contentColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.height(52.dp),                  // >= 48dp (NFR-16)
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant

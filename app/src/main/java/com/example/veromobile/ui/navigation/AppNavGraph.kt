@@ -5,8 +5,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -18,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.veromobile.ui.components.EntryType
 import com.example.veromobile.ui.components.AppBottomNavBar
 import com.example.veromobile.ui.components.AppNavTab
+import com.example.veromobile.ui.components.LocalFeatureInsets
 import com.example.veromobile.ui.auth.AccountScreen
 import com.example.veromobile.ui.auth.AuthLoadingScreen
 import com.example.veromobile.ui.auth.AuthScreen
@@ -29,6 +35,8 @@ import com.example.veromobile.ui.goals.savingsGoalsGraph
 import com.example.veromobile.ui.income.AddIncomeRoute
 import com.example.veromobile.ui.invoice.InvoicesScreen
 import com.example.veromobile.ui.invoice.NewInvoiceScreen
+import com.example.veromobile.ui.offline.OfflineScreen
+import com.example.veromobile.ui.offline.OfflineViewModel
 import com.example.veromobile.ui.recurring.recurringGraph
 import com.example.veromobile.ui.recurring.navigateToRecurring
 import com.example.veromobile.ui.spending.spendingGraph
@@ -73,18 +81,30 @@ fun AppNavGraph(authViewModel: AuthViewModel = hiltViewModel()) {
 /** Test seam for existing navigation instrumentation that does not exercise authentication. */
 @Composable
 fun AppNavGraph(navController: NavHostController) {
-    AuthenticatedNavGraph(email = null, onSignOut = {}, navController = navController)
+    AuthenticatedNavGraph(email = null, onSignOut = {}, navController = navController,
+        showOfflineMode = false)
 }
 
 @Composable
 private fun AuthenticatedNavGraph(
     email: String?,
     onSignOut: () -> Unit,
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    offlineViewModel: OfflineViewModel = hiltViewModel(),
+    showOfflineMode: Boolean = true
 ) {
+    val online by offlineViewModel.connectivity.isOnline.collectAsStateWithLifecycle()
+    val cachedOverview by offlineViewModel.overview.collectAsStateWithLifecycle()
+    var showOffline by remember { mutableStateOf(!online) }
+    LaunchedEffect(online) {
+        showOffline = !online
+        if (online) offlineViewModel.retry()
+    }
     val onSelectType: (EntryType) -> Unit = { type ->
         when (type) {
-            EntryType.EXPENSE -> navController.popBackStack<AddExpenseDestination>(inclusive = false)
+            EntryType.EXPENSE -> if (!navController.popBackStack<AddExpenseDestination>(inclusive = false)) {
+                navController.navigate(AddExpenseDestination) { launchSingleTop = true }
+            }
             EntryType.INCOME -> navController.navigate(AddIncomeDestination) { launchSingleTop = true }
         }
     }
@@ -97,15 +117,19 @@ private fun AuthenticatedNavGraph(
         currentRoute?.contains("SpendingDestination") == true -> AppNavTab.SPENDING
         currentRoute?.contains("SavingsGoalsDestination") == true -> AppNavTab.GOALS
         currentRoute?.contains("RecurringDestination") == true -> AppNavTab.RECURRING
+        currentRoute?.contains("AddExpenseDestination") == true || currentRoute?.contains("AddIncomeDestination") == true -> AppNavTab.ADD
         else -> AppNavTab.DASHBOARD
     }
 
     val showBottomBar = currentRoute?.contains("AccountDestination") != true &&
+            currentRoute?.contains("AddExpenseDestination") != true &&
+            currentRoute?.contains("AddIncomeDestination") != true &&
             currentRoute?.contains("NewInvoiceDestination") != true &&
             currentRoute?.contains("InvoicesDestination") != true
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        containerColor = androidx.compose.ui.graphics.Color.Black,
         bottomBar = {
             if (showBottomBar) {
                 AppBottomNavBar(
@@ -130,20 +154,24 @@ private fun AuthenticatedNavGraph(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
+            CompositionLocalProvider(LocalFeatureInsets provides innerPadding) {
             NavHost(navController, startDestination = DashboardDestination) {
                 composable<DashboardDestination> {
                     DashboardRoute(
                         viewModel = hiltViewModel(),
                         onNavigateAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } },
                         onNavigateGoals = { navController.navigateToSavingsGoals() },
+                        accountLabel = email ?: "Your account",
                         onNavigateInvoices = { navController.navigate(InvoicesDestination) { launchSingleTop = true } }
                     )
                 }
-                spendingGraph(navController)
+                spendingGraph(navController) {
+                    navController.navigate(AddExpenseDestination) { launchSingleTop = true }
+                }
                 recurringGraph(navController)
                 composable<AddExpenseDestination> {
                     AddExpenseRoute(
-                        onClose = {},
+                        onClose = { navController.popBackStack() },
                         onSelectType = onSelectType,
                         onAccount = { navController.navigate(AccountDestination) { launchSingleTop = true } }
                     )
@@ -185,6 +213,15 @@ private fun AuthenticatedNavGraph(
                 }
                 savingsGoalsGraph(navController)
             }
+            }
         }
+    }
+    if (showOfflineMode && showOffline) OfflineScreen(
+        overview = cachedOverview,
+        onHome = { showOffline = false; navController.navigate(DashboardDestination) { launchSingleTop = true } },
+        onSpending = { showOffline = false; navController.navigateToSpending() },
+        onAddExpense = { showOffline = false; navController.navigate(AddExpenseDestination) { launchSingleTop = true } },
+        onRetry = offlineViewModel::retry
+    )
     }
 }

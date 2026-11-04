@@ -13,3 +13,14 @@ data class Expense(
     val updatedAt: Long = System.currentTimeMillis(),
     val deleted: Boolean = false        // soft delete
 )
+
+/** Persisted expense snapshot for reporting, including local upload state. */
+data class ExpenseRecord(
+    val id: String,
+    val amountMinor: Long,
+    val categoryId: String,
+    val dateEpochDay: Long,
+    val channel: String,
+    val note: String,
+    val pendingSync: Boolean
+)

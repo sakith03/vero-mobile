@@ -4,7 +4,7 @@ import com.example.veromobile.domain.calc.GoalField
 import com.example.veromobile.domain.model.GoalDetails
 import com.example.veromobile.domain.model.SavingsGoal
 
-enum class GoalPage { DETAILS, CREATE, EDIT }
+enum class GoalPage { LANDING, DETAILS, EDIT }
 
 data class GoalFormState(
     val name: String = "",
@@ -27,7 +27,7 @@ data class ContributionFormState(
 )
 
 data class SavingsGoalsUiState(
-    val page: GoalPage = GoalPage.DETAILS,
+    val page: GoalPage = GoalPage.LANDING,
     val goals: List<SavingsGoal> = emptyList(),
     val details: GoalDetails? = null,
     val isLoading: Boolean = true,

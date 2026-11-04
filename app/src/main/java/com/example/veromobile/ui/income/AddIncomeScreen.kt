@@ -25,6 +25,14 @@ import com.example.veromobile.domain.model.Currency
 import com.example.veromobile.domain.model.IncomeSource
 import com.example.veromobile.ui.components.EntryType
 import com.example.veromobile.ui.components.EntryTypeTopBar
+import com.example.veromobile.ui.components.FeatureScreen
+import com.example.veromobile.ui.components.featureFieldColors
+import com.example.veromobile.ui.components.FeatureOrange
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.example.veromobile.ui.income.components.FreelanceInvoiceCard
 import com.example.veromobile.ui.income.components.IncomeSourceTabs
 import com.example.veromobile.ui.income.components.RateCard
@@ -83,15 +91,17 @@ fun AddIncomeScreen(
     onOpenInvoices: () -> Unit,
     onNewInvoice: () -> Unit,
     onAccount: () -> Unit = {}
-) {
+) = FeatureScreen {
+    BackHandler(state.isSaving) { }
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState, Modifier.padding(bottom = 72.dp)) },
+        contentColor = Color.White,
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
-            Modifier.padding(padding).padding(horizontal = 16.dp).fillMaxSize().imePadding()
+            Modifier.padding(padding).consumeWindowInsets(padding).padding(horizontal = 16.dp).fillMaxSize().imePadding()
         ) {
-            EntryTypeTopBar(EntryType.INCOME, onClose, onSelectType, onAccount)
+            EntryTypeTopBar(EntryType.INCOME, onClose, onSelectType, onAccount, enabled = !state.isSaving)
 
             Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()),
@@ -99,7 +109,7 @@ fun AddIncomeScreen(
             ) {
                 Text("Source", style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                IncomeSourceTabs(state.source, onSource)
+                IncomeSourceTabs(state.source, onSource, enabled = !state.isSaving)
 
                 AnimatedContent(
                     targetState = state.source,
@@ -115,12 +125,13 @@ fun AddIncomeScreen(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DateField(state.date, onDate, Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    DateField(state.date, onDate, Modifier.weight(1f), enabled = !state.isSaving)
                     OutlinedTextField(
                         value = state.note, onValueChange = onNote,
                         modifier = Modifier.weight(1f), singleLine = true,
-                        label = { Text("Note (optional)") }
+                        label = { Text("Note (optional)") }, enabled = !state.isSaving,
+                        shape = RoundedCornerShape(16.dp), colors = featureFieldColors()
                     )
                 }
                 state.dateError?.let {
@@ -130,7 +141,7 @@ fun AddIncomeScreen(
 
             Button(
                 onClick = onSave, enabled = !state.isSaving,
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(vertical = 4.dp)
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).heightIn(min = 56.dp), shape = CircleShape
             ) { Text(if (state.isSaving) "Saving…" else state.saveLabel) }
         }
     }
@@ -148,23 +159,23 @@ private fun IncomeSourcePanel(
     onNewInvoice: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (source.allowsForeignCurrency) CurrencyToggle(state.currency, onCurrency)
+        if (source.allowsForeignCurrency) CurrencyToggle(state.currency, onCurrency, !state.isSaving)
 
         Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 MoneyField(
                     label = if (source == IncomeSource.SALARY) "Actual salary received · LKR"
                     else "Amount in ${state.currency.code}",
-                    value = state.amountText, onChange = onAmount, error = state.amountError
+                    value = state.amountText, onChange = onAmount, error = state.amountError, enabled = !state.isSaving
                 )
                 AnimatedVisibility(state.currency == Currency.USD) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MoneyField("LKR actually received", state.lkrText, onLkr, state.lkrError)
-                        RateCard(state.derivedRateLabel, state.lastRateLabel, onUseLastRate)
+                        MoneyField("LKR actually received", state.lkrText, onLkr, state.lkrError, !state.isSaving)
+                        RateCard(state.derivedRateLabel, state.lastRateLabel, onUseLastRate, enabled = !state.isSaving)
                     }
                 }
                 if (source == IncomeSource.FREELANCE) {
-                    FreelanceInvoiceCard(onOpenInvoices, onNewInvoice)
+                    FreelanceInvoiceCard(onOpenInvoices, onNewInvoice, enabled = !state.isSaving)
                 }
             }
         }
@@ -173,7 +184,7 @@ private fun IncomeSourcePanel(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CurrencyToggle(selected: Currency, onSelect: (Currency) -> Unit) {
+private fun CurrencyToggle(selected: Currency, onSelect: (Currency) -> Unit, enabled: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text("Currency", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -181,6 +192,9 @@ private fun CurrencyToggle(selected: Currency, onSelect: (Currency) -> Unit) {
             Currency.entries.forEachIndexed { i, c ->
                 SegmentedButton(
                     selected = c == selected, onClick = { onSelect(c) },
+                    enabled = enabled, icon = {},
+                    colors = SegmentedButtonDefaults.colors(activeContainerColor = FeatureOrange, activeContentColor = Color.White,
+                        inactiveContainerColor = Color(0xFF121212), inactiveContentColor = Color.White),
                     shape = SegmentedButtonDefaults.itemShape(i, Currency.entries.size)
                 ) { Text(c.code) }
             }
@@ -189,13 +203,14 @@ private fun CurrencyToggle(selected: Currency, onSelect: (Currency) -> Unit) {
 }
 
 @Composable
-private fun MoneyField(label: String, value: String, onChange: (String) -> Unit, error: String?) {
+private fun MoneyField(label: String, value: String, onChange: (String) -> Unit, error: String?, enabled: Boolean = true) {
     Column {
         Text(label, style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value = value, onValueChange = onChange,
-            modifier = Modifier.fillMaxWidth(), singleLine = true, isError = error != null,
+            modifier = Modifier.fillMaxWidth().semantics { contentDescription = label }, singleLine = true, isError = error != null,
+            enabled = enabled, shape = RoundedCornerShape(16.dp), colors = featureFieldColors(),
             textStyle = MaterialTheme.typography.titleLarge,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             supportingText = error?.let { { Text(it) } }
@@ -205,11 +220,12 @@ private fun MoneyField(label: String, value: String, onChange: (String) -> Unit,
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DateField(date: LocalDate, onDateSelected: (LocalDate) -> Unit, modifier: Modifier = Modifier) {
+private fun DateField(date: LocalDate, onDateSelected: (LocalDate) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     var showPicker by remember { mutableStateOf(false) }
 
     Surface(
         onClick = { showPicker = true },
+        enabled = enabled,
         modifier = modifier.heightIn(min = 56.dp),
         shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surface
     ) {
