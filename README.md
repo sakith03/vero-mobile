@@ -41,7 +41,7 @@ The application supports multiple income sources and currencies, including LKR a
 
 The application follows the **Model-View-ViewModel (MVVM)** architecture to separate the user interface, application logic, and data management.
 
-<img width="847" height="949" alt="Screenshot 2026-10-21 000358" src="https://github.com/user-attachments/assets/7d904530-a842-4501-9aa7-aa816f3d67f0" />
+<img width="847" height="949" alt="Screenshot 2026-10-21 000358" src="https://github.com/user-attachments/assets/22da1a16-50b4-4393-b62c-ca10155640c5" />
 
 ### Architecture Layers
 
@@ -88,39 +88,76 @@ Concurrent edits to the same record are resolved using a last-write-wins policy 
 
 ## Firebase Configuration
 
-> **Status:** Firebase configuration is not yet completed.
+> **Status:** Firebase is configured for the Vero Mobile Android project. Email/Password Authentication and the user profile document in Cloud Firestore have been tested. Individual feature synchronization should be verified separately before treating it as fully tested.
 
 ### Prerequisites
 
-- A Google account.
-- Access to the Firebase Console.
-- An Android development environment with Android Studio.
+- A Google account with access to the **Vero-Finance-App** Firebase project.
+- Android Studio, Android SDK, and the JDK required by the project's Gradle configuration.
+- Internet access for initial account registration, sign-in, and Firebase configuration.
 
 ### Setup Instructions
 
-1. Create a Firebase project in the Firebase Console.
-2. Register the Android application using its package name.
-3. Download the `google-services.json` configuration file.
-4. Place the downloaded file in the Android application's `app/` directory.
-5. Configure the Google Services Gradle plugin and required Firebase dependencies.
-6. Enable Email/Password authentication in Firebase Authentication.
-7. Configure Cloud Firestore and its security rules.
-8. Ensure Firestore access is restricted to the authenticated owner of each user's data.
-9. Build and run the application to verify the Firebase integration.
+1. Open the [Firebase Console](https://console.firebase.google.com/) and select **Vero-Finance-App**.
+2. Confirm that the Android application is registered with the package name `com.example.veromobile`.
+3. Place the Firebase project's Android configuration file at `app/google-services.json`.
+4. Sync the project with Gradle. The Google Services plugin and Firebase Authentication/Firestore dependencies are already declared in the project configuration.
+5. In **Authentication → Sign-in method**, confirm that **Email/Password** is enabled.
+6. In **Cloud Firestore**, use the `(default)` database and review the active security rules under **Rules**.
+7. Test account registration and sign-in, then confirm that the authenticated user's profile appears under `users/{uid}`.
+8. Test saving and loading income, expenses, and other records separately to verify the full Firestore/Room synchronization flow.
 
 ### Firebase Configuration Details
 
-**Firebase Project ID:** 
+| Setting | Configuration |
+| --- | --- |
+| Firebase project name | **Vero-Finance-App** |
+| Firebase project ID | `vero-finance-app` |
+| Android package name | `com.example.veromobile` |
+| Firebase Android configuration | `app/google-services.json` |
+| Authentication SDK | Firebase Authentication |
+| Enabled authentication provider | **Email/Password** (confirmed) |
+| Google Sign-In | Listed in the SRS; do not assume it is enabled or tested |
+| Cloud database | **Cloud Firestore** — `(default)` database |
+| Firestore data layout | User-scoped documents under `users/{uid}` |
+| Firestore rules file | `firestore.rules` at the repository root |
+| Rules version | `rules_version = '2'` |
+| Local database | Room (SQLite) for offline persistence |
+| Build configuration | Google Services Gradle plugin, Firebase BoM, Firebase Authentication and Firestore dependencies (Kotlin DSL) |
 
-**Android Package Name:** 
+### Firebase Authentication
 
-**Authentication Providers:** 
+The app uses Firebase Authentication for account registration and sign-in. Each account is identified by its Firebase user ID (`uid`), which is used to scope its financial records. Password-reset, session persistence, and sign-out behavior should be checked using the final APK. Firebase Authentication is not replaced by local client-side checks when offline.
 
-**Cloud Firestore Configuration:** 
+### Cloud Firestore Data Structure
 
-**Firestore Security Rules:** 
+The project defines the following user-scoped collection paths. Firestore collections appear in the console when documents have been written.
 
-**Additional Configuration:** 
+| Collection | Document path | Purpose |
+| --- | --- | --- |
+| User profile | `users/{uid}` | User account details |
+| Incomes | `users/{uid}/incomes/{id}` | Salary, freelance, AdSense, and other income |
+| Expenses | `users/{uid}/expenses/{id}` | Categorized expense transactions |
+| Categories | `users/{uid}/categories/{id}` | User-defined spending categories |
+| Invoices | `users/{uid}/invoices/{id}` | Freelance invoice records |
+| Crypto trades | `users/{uid}/cryptoTrades/{id}` | Realized cryptocurrency profit/loss records |
+| Recurring rules | `users/{uid}/recurringRules/{id}` | Recurring bills and subscriptions |
+| Savings goals | `users/{uid}/savingsGoals/{id}` | Financial savings targets |
+| Goal contributions | `users/{uid}/goalContributions/{id}` | Contributions linked to savings goals |
+
+Financial amounts are represented using integer minor units to avoid floating-point rounding issues. The schema includes ownership fields and supports dates, category references, update times, and deletion state where defined by the corresponding models.
+
+### Firestore Security Rules
+
+The repository includes `firestore.rules`, using Firestore Security Rules version 2. Rules require an authenticated user and verify ownership of `users/{userId}` documents and their supported subcollections using the Firebase UID. The repository rules also define field and data-type validation for supported financial document types.
+
+**Important:** Updating the local `firestore.rules` file does not automatically publish it to Firebase. The rules deployed in the Firebase Console must be reviewed and published separately. Android-side validation is not a substitute for server-side Firestore Security Rules.
+
+### Offline Storage and Synchronization
+
+Room stores local financial data, while Firestore provides the cloud data source. The app is designed to preserve cached records and pending local changes when the device is offline, then synchronize eligible changes on reconnection. A previously authenticated session may access its own cached data offline; a new account cannot be authenticated for the first time without contacting Firebase.
+
+To verify end-to-end synchronization, test record creation, editing, deletion, offline changes, reconnection, and cross-user isolation. A local “saved” confirmation does not by itself prove that the cloud write succeeded.
 
 ## Build Instructions
 
